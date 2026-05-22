@@ -356,11 +356,29 @@
   </button>
 </div>
 
-<script>
-// ── STATE ──
-const API_URL = "/api/chat";
-const MODEL   = "claude-sonnet-4-20250514";
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ── CONFIG ──
+const API_URL  = "/API/chat";
+const MODEL    = "claude-sonnet-4-20250514";
+const SB_URL   = "https://ynoinlubuhyirznzgltn.supabase.co";
+const SB_KEY   = "sb_publishable_rUqzmfpIhz_U6pnI54JMhA_yRWXSOv6";
+
+const sb = supabase.createClient(SB_URL, SB_KEY);
+
+// ── USER ID (anon, persisted) ──
+function getUserId() {
+  let uid = localStorage.getItem('cotidioma_uid');
+  if (!uid) {
+    uid = 'user_' + Math.random().toString(36).slice(2, 11);
+    localStorage.setItem('cotidioma_uid', uid);
+  }
+  return uid;
+}
+const USER_ID = getUserId();
+
+// ── STATE ──
 let state = {
   mode: 1,
   scenario: 'job interview',
@@ -372,25 +390,104 @@ let state = {
   mode3View: 'review',
 };
 
-// load from localStorage
-function loadState() {
+// ── SUPABASE PERSISTENCE ──
+async function loadState() {
   try {
-    const saved = JSON.parse(localStorage.getItem('lingo_state') || '{}');
-    if (saved.level)         state.level = saved.level;
-    if (saved.errors)        state.errors = saved.errors;
-    if (saved.diagnosisDone) state.diagnosisDone = saved.diagnosisDone;
-    if (saved.history)       state.history = { ...state.history, ...saved.history };
-  } catch(e) {}
+    // Load profile
+    const { data: profile } = await sb
+      .from('profiles')
+      .select('*')
+      .eq('id', USER_ID)
+      .single();
+
+    if (profile) {
+      state.level         = profile.level;
+      state.diagnosisDone = profile.diagnosis_done;
+      state.diagnosisCount= profile.diagnosis_count;
+    }
+
+    // Load errors
+    const { data: errors } = await sb
+      .from('errors')
+      .select('*')
+      .eq('user_id', USER_ID)
+      .order('ts', { ascending: true });
+
+    if (errors && errors.length > 0) {
+      state.errors = errors.map(e => ({
+        wrong: e.wrong,
+        right: e.right_text,
+        why:   e.why,
+        mode:  e.mode,
+        ts:    e.ts,
+      }));
+    }
+
+    // Load history for all modes
+    const { data: histories } = await sb
+      .from('history')
+      .select('*')
+      .eq('user_id', USER_ID);
+
+    if (histories) {
+      histories.forEach(h => {
+        state.history[h.mode] = h.messages || [];
+      });
+    }
+  } catch(e) {
+    console.warn('Supabase load failed, using localStorage fallback', e);
+    // localStorage fallback
+    try {
+      const saved = JSON.parse(localStorage.getItem('cotidioma_state') || '{}');
+      if (saved.level)          state.level          = saved.level;
+      if (saved.errors)         state.errors         = saved.errors;
+      if (saved.diagnosisDone)  state.diagnosisDone  = saved.diagnosisDone;
+      if (saved.diagnosisCount) state.diagnosisCount = saved.diagnosisCount;
+      if (saved.history)        state.history        = { ...state.history, ...saved.history };
+    } catch(e2) {}
+  }
   updateLevelBadge();
 }
 
-function saveState() {
-  localStorage.setItem('lingo_state', JSON.stringify({
-    level: state.level,
-    errors: state.errors,
-    diagnosisDone: state.diagnosisDone,
-    history: state.history,
+async function saveProfile() {
+  try {
+    await sb.from('profiles').upsert({
+      id:              USER_ID,
+      level:           state.level,
+      diagnosis_done:  state.diagnosisDone,
+      diagnosis_count: state.diagnosisCount,
+      updated_at:      new Date().toISOString(),
+    });
+  } catch(e) { console.warn('Profile save failed', e); }
+  // always mirror to localStorage
+  localStorage.setItem('cotidioma_state', JSON.stringify({
+    level: state.level, diagnosisDone: state.diagnosisDone,
+    diagnosisCount: state.diagnosisCount,
   }));
+}
+
+async function saveError(correction) {
+  try {
+    await sb.from('errors').insert({
+      user_id:    USER_ID,
+      wrong:      correction.wrong,
+      right_text: correction.right,
+      why:        correction.why,
+      mode:       state.mode,
+      ts:         Date.now(),
+    });
+  } catch(e) { console.warn('Error save failed', e); }
+}
+
+async function saveHistory(mode) {
+  try {
+    await sb.from('history').upsert({
+      user_id:    USER_ID,
+      mode:       mode,
+      messages:   state.history[mode],
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,mode' });
+  } catch(e) { console.warn('History save failed', e); }
 }
 
 // ── SYSTEM PROMPTS ──
@@ -400,7 +497,7 @@ function getSystemPrompt() {
     : `You have not assessed the user's level yet — do it through the first few natural exchanges.`;
 
   if (!state.diagnosisDone && state.diagnosisCount < 5) {
-    return `You are LINGO, a friendly English coach for a Spanish-speaking user from Chile.
+    return `You are COTIDIOMA, a friendly English coach for a Spanish-speaking user from Chile.
 ${levelInfo}
 Your current goal: naturally assess their English level through conversation — do NOT make it feel like a test. Ask about their day, where they're from, what they like. After 3-5 messages, you'll know their level.
 IMPORTANT RULES:
@@ -414,7 +511,7 @@ IMPORTANT RULES:
   }
 
   const prompts = {
-    1: `You are LINGO, playing a role in a simulated English conversation scenario: "${state.scenario}".
+    1: `You are COTIDIOMA, playing a role in a simulated English conversation scenario: "${state.scenario}".
 ${levelInfo}
 RULES:
 - Stay fully in character for the scenario. Play the other person (interviewer, barista, receptionist, etc.).
@@ -424,7 +521,7 @@ RULES:
 - Keep the simulation immersive and realistic.
 - Push the conversation forward naturally.`,
 
-    2: `You are LINGO, having a casual daily check-in conversation in English with a Chilean user.
+    2: `You are COTIDIOMA, having a casual daily check-in conversation in English with a Chilean user.
 ${levelInfo}
 RULES:
 - Be like a friendly bilingual friend — ask about their day, how they feel, what happened, plans.
@@ -433,14 +530,14 @@ RULES:
 - Respond in natural conversational English.
 - Keep it light, warm, real. Not a classroom.`,
 
-    3: `You are LINGO, running a targeted English practice session for a Chilean user.
+    3: `You are COTIDIOMA, running a targeted English practice session for a Chilean user.
 ${levelInfo}
 The user has made these mistakes in past sessions: ${JSON.stringify(state.errors.slice(-10))}
 RULES:
 - Create exercises to practice the exact patterns where they made mistakes.
 - Use fill-in-the-blank, rephrase challenges, or mini-dialogues targeting their weak spots.
 - After EACH user response: correct mistakes using <CORRECTIONS>[{"wrong":"...","right":"...","why":"... in Spanish"}]</CORRECTIONS>
-- Celebrate correct usage of previously-wrong patterns. 
+- Celebrate correct usage of previously-wrong patterns.
 - Be encouraging and specific.`
   };
 
@@ -463,7 +560,6 @@ function parseResponse(text) {
     level = lvlMatch[1].trim();
     clean = clean.replace(/<LEVEL>.*?<\/LEVEL>/, '').trim();
   }
-
   return { text: clean, corrections, level };
 }
 
@@ -497,11 +593,12 @@ function renderBubble(role, text, corrections = []) {
     });
     bubble.appendChild(corrDiv);
 
-    // save to errors
+    // save each correction
     corrections.forEach(c => {
-      state.errors.push({ ...c, mode: state.mode, ts: Date.now() });
+      const err = { ...c, mode: state.mode, ts: Date.now() };
+      state.errors.push(err);
+      saveError(err);
     });
-    saveState();
   }
 
   msg.appendChild(avatar);
@@ -533,12 +630,7 @@ async function callClaude(userMsg) {
   const resp = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 1000,
-      system: getSystemPrompt(),
-      messages,
-    })
+    body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: getSystemPrompt(), messages }),
   });
 
   const data = await resp.json();
@@ -546,20 +638,18 @@ async function callClaude(userMsg) {
   const { text, corrections, level } = parseResponse(raw);
 
   history.push({ role: 'assistant', content: raw });
-  // keep last 20 turns
   if (history.length > 20) history.splice(0, history.length - 20);
   state.history[state.mode] = history;
-  saveState();
+  saveHistory(state.mode);
 
-  // diagnosis logic
   if (!state.diagnosisDone) {
     state.diagnosisCount++;
     if (level) {
       state.level = level;
       state.diagnosisDone = true;
-      saveState();
       updateLevelBadge();
     }
+    saveProfile();
   }
 
   return { text, corrections };
@@ -568,17 +658,13 @@ async function callClaude(userMsg) {
 // ── SEND MESSAGE ──
 async function sendMessage() {
   const input = document.getElementById('userInput');
-  const btn = document.getElementById('sendBtn');
-  const msg = input.value.trim();
+  const btn   = document.getElementById('sendBtn');
+  const msg   = input.value.trim();
   if (!msg || btn.classList.contains('disabled')) return;
 
   input.value = ''; autoResize(input);
   btn.classList.add('disabled');
-
-  // user bubble
   renderBubble('user', msg);
-
-  // typing
   showTyping();
 
   try {
@@ -594,38 +680,31 @@ async function sendMessage() {
   input.focus();
 }
 
-// ── START BOT FIRST ──
+// ── BOT STARTS ──
 async function botStarts(initialPrompt) {
   const wrap = document.getElementById('chatWrap');
-  // clear chat
   wrap.innerHTML = '';
   showTyping();
 
   const history = state.history[state.mode];
-  // inject a system trigger
   history.push({ role: 'user', content: initialPrompt });
-
   const messages = history.map(m => ({ role: m.role, content: m.content }));
+
   try {
     const resp = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 1000,
-        system: getSystemPrompt(),
-        messages,
-      })
+      body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: getSystemPrompt(), messages }),
     });
     const data = await resp.json();
-    const raw = data.content?.[0]?.text || '';
+    const raw  = data.content?.[0]?.text || '';
     const { text, corrections, level } = parseResponse(raw);
 
     history.push({ role: 'assistant', content: raw });
     state.history[state.mode] = history;
-    saveState();
+    saveHistory(state.mode);
 
-    if (level) { state.level = level; state.diagnosisDone = true; saveState(); updateLevelBadge(); }
+    if (level) { state.level = level; state.diagnosisDone = true; saveProfile(); updateLevelBadge(); }
     removeTyping();
     renderBubble('bot', text, corrections);
   } catch(e) {
@@ -637,50 +716,42 @@ async function botStarts(initialPrompt) {
 // ── SWITCH MODE ──
 function switchMode(m) {
   state.mode = m;
-
-  // update buttons
   document.querySelectorAll('.mode-btn').forEach(b => {
     b.classList.remove('active-m1','active-m2','active-m3');
     if (parseInt(b.dataset.mode) === m) b.classList.add(`active-m${m}`);
   });
-
-  // show/hide scenario picker
   document.getElementById('scenarioPicker').classList.toggle('visible', m === 1);
   document.getElementById('mode3Header').style.display = m === 3 ? 'flex' : 'none';
 
-  // reset view
-  const chatWrap = document.getElementById('chatWrap');
+  const chatWrap    = document.getElementById('chatWrap');
   const errorsPanel = document.getElementById('errorsPanel');
   chatWrap.innerHTML = '';
   errorsPanel.classList.remove('visible');
   chatWrap.style.display = 'flex';
 
   if (m === 1) {
-    // start scenario
     startScenario();
   } else if (m === 2) {
-    // daily conversation — bot starts
     const starters = [
       "[Start the daily check-in. Ask me how my day went in a friendly way. Keep it casual.]",
       "[Start a morning check-in. Ask me about my plans for today.]",
       "[It's afternoon. Ask me how my morning went and what I had for lunch.]",
       "[Evening check-in. Ask me about the highlight of my day.]",
     ];
-    const pick = starters[Math.floor(Math.random() * starters.length)];
     state.history[2] = [];
-    botStarts(pick);
+    botStarts(starters[Math.floor(Math.random() * starters.length)]);
   } else if (m === 3) {
     setMode3View('review');
   }
 }
 
-// ── MODE 3 VIEWS ──
+// ── MODE 3 ──
 function setMode3View(view) {
   state.mode3View = view;
   document.getElementById('btnReview').classList.toggle('active', view === 'review');
   document.getElementById('btnPractice').classList.toggle('active', view === 'practice');
 
-  const chatWrap = document.getElementById('chatWrap');
+  const chatWrap    = document.getElementById('chatWrap');
   const errorsPanel = document.getElementById('errorsPanel');
 
   if (view === 'review') {
@@ -706,10 +777,9 @@ function renderErrorsPanel() {
     panel.innerHTML = `<div class="no-errors"><div class="icon">✨</div><p>No errors yet! Start practicing and your mistakes will appear here for review.</p></div>`;
     return;
   }
-  // show last 20, newest first
   const recent = [...state.errors].reverse().slice(0, 20);
-  recent.forEach((e, i) => {
-    const modeNames = { 1: 'Situación', 2: 'Día a Día', 3: 'Práctica' };
+  const modeNames = { 1: 'Situación', 2: 'Día a Día', 3: 'Práctica' };
+  recent.forEach(e => {
     const date = new Date(e.ts).toLocaleDateString('es-CL', { day:'2-digit', month:'short' });
     panel.innerHTML += `
       <div class="error-card">
@@ -739,12 +809,10 @@ function startScenario() {
 function handleKey(e) {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
-
 function autoResize(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
-
 function updateLevelBadge() {
   const badge = document.getElementById('levelBadge');
   if (state.level) {
@@ -757,9 +825,7 @@ function updateLevelBadge() {
 }
 
 // ── INIT ──
-loadState();
-// start with mode 1 default scenario
-startScenario();
+loadState().then(() => startScenario());
 </script>
 </body>
 </html>
