@@ -22,91 +22,117 @@
     --mode2: #50e3b4;
     --mode3: #f5c842;
   }
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
     font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; display: flex; flex-direction: column; overflow: hidden;
   }
-
-  /* ── NOISE OVERLAY ── */
   body::before {
-    content: '';
-    position: fixed; inset: 0;
+    content: ''; position: fixed; inset: 0;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
     pointer-events: none; z-index: 0; opacity: .5;
+  }
+
+  /* ── DIAGNOSIS SCREEN ── */
+  #diagnosisScreen {
+    position: fixed; inset: 0; z-index: 100;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px; gap: 0;
+  }
+  #diagnosisScreen.hidden { display: none; }
+
+  .diag-logo {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 28px;
+    letter-spacing: 0.08em;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .diag-sub {
+    font-size: 13px; color: var(--muted); margin-bottom: 32px; text-align: center;
+  }
+  .diag-chat {
+    width: 100%; max-width: 480px; flex: 1;
+    display: flex; flex-direction: column; gap: 12px;
+    overflow-y: auto; padding-bottom: 16px;
+    max-height: calc(100vh - 260px);
+  }
+  .diag-chat::-webkit-scrollbar { width: 4px; }
+  .diag-chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .diag-progress {
+    width: 100%; max-width: 480px;
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 16px;
+  }
+  .diag-progress-bar {
+    flex: 1; height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden;
+  }
+  .diag-progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent3));
+    border-radius: 2px; transition: width .4s ease;
+    width: 0%;
+  }
+  .diag-progress-label {
+    font-size: 11px; color: var(--muted); font-family: 'Syne', sans-serif;
+    letter-spacing: .08em; white-space: nowrap;
+  }
+
+  .diag-input-wrap {
+    width: 100%; max-width: 480px;
+    display: flex; gap: 10px; align-items: flex-end; margin-top: 12px;
   }
 
   /* ── HEADER ── */
   header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--border);
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
     position: relative; z-index: 10;
-    background: rgba(13,15,20,0.8);
-    backdrop-filter: blur(12px);
+    background: rgba(13,15,20,0.8); backdrop-filter: blur(12px);
   }
-
   .logo {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800; font-size: 20px;
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px;
     letter-spacing: 0.08em;
     background: linear-gradient(135deg, var(--accent), var(--accent3));
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   }
-
   .level-badge {
-    font-family: 'Syne', sans-serif;
-    font-size: 11px; font-weight: 700;
+    font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
     padding: 4px 10px; border-radius: 20px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    letter-spacing: 0.1em;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    letter-spacing: 0.1em; cursor: pointer; transition: all .2s;
   }
   .level-badge.known { color: var(--accent3); border-color: rgba(80,227,180,0.3); }
+  .level-badge:hover { background: var(--surface); }
 
-  /* ── MODE SELECTOR ── */
+  /* ── MODE BAR ── */
   .mode-bar {
     display: flex; gap: 8px; padding: 14px 16px;
     border-bottom: 1px solid var(--border);
-    position: relative; z-index: 10;
-    overflow-x: auto;
+    position: relative; z-index: 10; overflow-x: auto;
   }
   .mode-bar::-webkit-scrollbar { display: none; }
-
   .mode-btn {
     display: flex; align-items: center; gap: 7px;
     padding: 8px 14px; border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--muted);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px; font-weight: 500;
-    cursor: pointer; white-space: nowrap;
-    transition: all .2s;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all .2s;
   }
-  .mode-btn .dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: currentColor; opacity: .5;
-  }
+  .mode-btn .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .5; }
   .mode-btn:hover { background: var(--surface2); color: var(--text); }
   .mode-btn.active-m1 { background: rgba(79,143,255,0.12); border-color: rgba(79,143,255,0.4); color: var(--mode1); }
   .mode-btn.active-m2 { background: rgba(80,227,180,0.10); border-color: rgba(80,227,180,0.35); color: var(--mode2); }
   .mode-btn.active-m3 { background: rgba(245,200,66,0.10); border-color: rgba(245,200,66,0.35); color: var(--mode3); }
   .mode-btn.active-m1 .dot, .mode-btn.active-m2 .dot, .mode-btn.active-m3 .dot { opacity: 1; }
 
-  /* ── SCENARIO PICKER (mode 1) ── */
+  /* ── SCENARIO PICKER ── */
   .scenario-picker {
     display: none; flex-wrap: wrap; gap: 8px;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
     background: rgba(79,143,255,0.04);
   }
   .scenario-picker.visible { display: flex; }
@@ -116,121 +142,78 @@
     background: transparent; color: var(--muted);
     font-size: 12px; cursor: pointer; transition: all .15s;
   }
-  .scenario-chip:hover, .scenario-chip.active { 
-    background: rgba(79,143,255,0.15); 
-    border-color: var(--mode1); color: var(--text); 
+  .scenario-chip:hover, .scenario-chip.active {
+    background: rgba(79,143,255,0.15); border-color: var(--mode1); color: var(--text);
   }
 
-  /* ── CHAT AREA ── */
+  /* ── CHAT ── */
   .chat-wrap {
-    flex: 1; overflow-y: auto;
-    padding: 16px;
+    flex: 1; overflow-y: auto; padding: 16px;
     display: flex; flex-direction: column; gap: 12px;
     position: relative; z-index: 1;
   }
   .chat-wrap::-webkit-scrollbar { width: 4px; }
-  .chat-wrap::-webkit-scrollbar-track { background: transparent; }
   .chat-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-  /* message bubbles */
   .msg { display: flex; gap: 10px; animation: fadeUp .3s ease; max-width: 100%; }
-  @keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
-
+  @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
   .msg.user { flex-direction: row-reverse; }
-
   .avatar {
     width: 32px; height: 32px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 15px; flex-shrink: 0;
-    background: var(--surface2);
+    font-size: 15px; flex-shrink: 0; background: var(--surface2);
   }
   .msg.bot .avatar { background: linear-gradient(135deg, rgba(79,143,255,0.3), rgba(80,227,180,0.3)); }
-
   .bubble {
-    max-width: calc(100% - 80px);
-    padding: 11px 14px; border-radius: 14px;
+    max-width: calc(100% - 80px); padding: 11px 14px; border-radius: 14px;
     line-height: 1.55; font-size: 14px;
   }
-  .msg.bot .bubble {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-top-left-radius: 4px;
-  }
+  .msg.bot .bubble { background: var(--surface); border: 1px solid var(--border); border-top-left-radius: 4px; }
   .msg.user .bubble {
-    background: rgba(79,143,255,0.15);
-    border: 1px solid rgba(79,143,255,0.25);
-    border-top-right-radius: 4px;
-    color: #c8d8ff;
+    background: rgba(79,143,255,0.15); border: 1px solid rgba(79,143,255,0.25);
+    border-top-right-radius: 4px; color: #c8d8ff;
   }
-
-  /* correction block inside bubble */
   .correction {
-    margin-top: 10px; padding: 10px 12px;
-    border-radius: 8px;
-    background: rgba(245,200,66,0.07);
-    border-left: 3px solid var(--gold);
-    font-size: 13px;
+    margin-top: 10px; padding: 10px 12px; border-radius: 8px;
+    background: rgba(245,200,66,0.07); border-left: 3px solid var(--gold); font-size: 13px;
   }
   .correction .label {
-    font-family: 'Syne', sans-serif;
-    font-size: 10px; font-weight: 700;
-    letter-spacing: .1em; color: var(--gold);
-    margin-bottom: 5px;
+    font-family: 'Syne', sans-serif; font-size: 10px; font-weight: 700;
+    letter-spacing: .1em; color: var(--gold); margin-bottom: 5px;
   }
   .corr-line { margin: 3px 0; }
   .corr-line .wrong { color: var(--accent2); text-decoration: line-through; }
   .corr-line .right { color: var(--accent3); }
   .explanation { margin-top: 6px; color: var(--muted); font-size: 12px; font-style: italic; }
 
-  /* typing indicator */
   .typing { display: flex; gap: 5px; align-items: center; padding: 14px; }
   .typing span {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--muted);
+    width: 7px; height: 7px; border-radius: 50%; background: var(--muted);
     animation: bounce 1.2s infinite;
   }
   .typing span:nth-child(2) { animation-delay: .2s; }
   .typing span:nth-child(3) { animation-delay: .4s; }
-  @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
-
-  /* empty state */
-  .empty-state {
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    flex: 1; gap: 12px; color: var(--muted);
-    text-align: center; padding: 40px 20px;
-  }
-  .empty-icon { font-size: 48px; }
-  .empty-state p { font-size: 13px; line-height: 1.6; max-width: 260px; }
+  @keyframes bounce { 0%,60%,100% { transform:translateY(0); } 30% { transform:translateY(-6px); } }
 
   /* ── INPUT ── */
   .input-area {
-    padding: 12px 16px;
-    border-top: 1px solid var(--border);
+    padding: 12px 16px; border-top: 1px solid var(--border);
     display: flex; gap: 10px; align-items: flex-end;
-    background: rgba(13,15,20,0.9);
-    backdrop-filter: blur(12px);
+    background: rgba(13,15,20,0.9); backdrop-filter: blur(12px);
     position: relative; z-index: 10;
   }
-
   textarea {
-    flex: 1; resize: none;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px; padding: 10px 14px;
+    flex: 1; resize: none; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px;
     color: var(--text); font-family: 'DM Sans', sans-serif;
-    font-size: 14px; line-height: 1.5;
-    outline: none; transition: border-color .2s;
+    font-size: 14px; line-height: 1.5; outline: none; transition: border-color .2s;
     max-height: 120px; min-height: 44px;
   }
   textarea:focus { border-color: var(--accent); }
   textarea::placeholder { color: var(--muted); }
-
   .send-btn {
-    width: 44px; height: 44px; border-radius: 12px;
-    border: none; cursor: pointer;
-    background: var(--accent);
-    display: flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--accent); display: flex; align-items: center; justify-content: center;
     transition: all .2s; flex-shrink: 0;
   }
   .send-btn:hover { background: #6fa3ff; transform: scale(1.05); }
@@ -238,82 +221,84 @@
   .send-btn svg { width: 18px; height: 18px; fill: white; }
   .send-btn.disabled { background: var(--surface2); cursor: not-allowed; opacity: .5; }
 
-  /* ── ERRORS PANEL (mode 3) ── */
-  .errors-panel {
-    display: none; flex-direction: column; gap: 10px;
-    padding: 16px; overflow-y: auto; flex: 1;
-  }
+  /* ── ERRORS PANEL ── */
+  .errors-panel { display: none; flex-direction: column; gap: 10px; padding: 16px; overflow-y: auto; flex: 1; }
   .errors-panel.visible { display: flex; }
   .error-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px; padding: 14px;
-    border-left: 3px solid var(--gold);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px; border-left: 3px solid var(--gold);
   }
-  .error-card .meta {
-    font-size: 11px; color: var(--muted); margin-bottom: 8px;
-    font-family: 'Syne', sans-serif; letter-spacing: .08em; text-transform: uppercase;
-  }
+  .error-card .meta { font-size: 11px; color: var(--muted); margin-bottom: 8px; font-family: 'Syne', sans-serif; letter-spacing: .08em; text-transform: uppercase; }
   .error-card .wrong-text { color: var(--accent2); font-size: 14px; margin-bottom: 4px; }
   .error-card .right-text { color: var(--accent3); font-size: 14px; font-weight: 500; }
   .error-card .why { color: var(--muted); font-size: 12px; margin-top: 8px; font-style: italic; }
-
-  .no-errors {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 10px; color: var(--muted); text-align: center;
-    padding: 60px 20px; font-size: 13px;
-  }
+  .no-errors { display: flex; flex-direction: column; align-items: center; gap: 10px; color: var(--muted); text-align: center; padding: 60px 20px; font-size: 13px; }
   .no-errors .icon { font-size: 48px; }
 
-  /* mode3 chat mode */
   .mode3-header {
     display: flex; align-items: center; justify-content: space-between;
     padding: 10px 16px; border-bottom: 1px solid var(--border);
     font-size: 12px; color: var(--muted);
   }
-  .mode3-toggle {
-    display: flex; gap: 6px;
-  }
+  .mode3-toggle { display: flex; gap: 6px; }
   .toggle-btn {
     padding: 4px 10px; border-radius: 8px; font-size: 12px;
     border: 1px solid var(--border); background: transparent;
-    color: var(--muted); cursor: pointer; transition: all .15s;
-    font-family: 'DM Sans', sans-serif;
+    color: var(--muted); cursor: pointer; transition: all .15s; font-family: 'DM Sans', sans-serif;
   }
   .toggle-btn.active { background: rgba(245,200,66,0.12); border-color: var(--mode3); color: var(--mode3); }
 
-  /* ── RESPONSIVE SCROLL FIX ── */
-  .main-content {
-    flex: 1; display: flex; flex-direction: column;
-    overflow: hidden; min-height: 0;
+  .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+
+  /* ── LEVEL UP TOAST ── */
+  .toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface2); border: 1px solid var(--accent3);
+    color: var(--accent3); padding: 10px 20px; border-radius: 20px;
+    font-size: 13px; font-family: 'Syne', sans-serif; letter-spacing: .05em;
+    opacity: 0; transition: all .4s; z-index: 200; white-space: nowrap;
   }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
-<header>
-  <div class="logo">COTIDIOMA</div>
-  <div class="level-badge" id="levelBadge">Calibrating...</div>
-</header>
+<!-- ── DIAGNOSIS SCREEN ── -->
+<div id="diagnosisScreen">
+  <div class="diag-logo">COTIDIOMA</div>
+  <div class="diag-sub">Tu coach de inglés personal · Primero te conozco 👋</div>
 
-<!-- MODE BAR -->
-<div class="mode-bar">
-  <button class="mode-btn active-m1" data-mode="1" onclick="switchMode(1)">
-    <span class="dot"></span> Situaciones
-  </button>
-  <button class="mode-btn" data-mode="2" onclick="switchMode(2)">
-    <span class="dot"></span> Día a Día
-  </button>
-  <button class="mode-btn" data-mode="3" onclick="switchMode(3)">
-    <span class="dot"></span> Mis Frases
-  </button>
+  <div class="diag-progress">
+    <div class="diag-progress-bar"><div class="diag-progress-fill" id="diagFill"></div></div>
+    <div class="diag-progress-label" id="diagLabel">Iniciando...</div>
+  </div>
+
+  <div class="diag-chat" id="diagChat"></div>
+
+  <div class="diag-input-wrap">
+    <textarea id="diagInput" placeholder="Write in English... (or try your best!)" rows="1"
+      onkeydown="handleDiagKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="send-btn" id="diagSendBtn" onclick="sendDiagMessage()">
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </div>
 </div>
 
-<!-- SCENARIO PICKER (mode 1) -->
+<!-- ── MAIN APP ── -->
+<header>
+  <div class="logo">COTIDIOMA</div>
+  <div class="level-badge" id="levelBadge" onclick="resetLevel()" title="Click to re-take diagnosis">Calibrating...</div>
+</header>
+
+<div class="mode-bar">
+  <button class="mode-btn active-m1" data-mode="1" onclick="switchMode(1)"><span class="dot"></span> Situaciones</button>
+  <button class="mode-btn" data-mode="2" onclick="switchMode(2)"><span class="dot"></span> Día a Día</button>
+  <button class="mode-btn" data-mode="3" onclick="switchMode(3)"><span class="dot"></span> Mis Frases</button>
+</div>
+
 <div class="scenario-picker visible" id="scenarioPicker">
-  <button class="scenario-chip active" onclick="selectScenario(this, 'job interview')">💼 Job Interview</button>
-  <button class="scenario-chip" onclick="selectScenario(this, 'coffee shop')">☕ Coffee Shop</button>
+  <button class="scenario-chip active" onclick="selectScenario(this, 'coffee shop')">☕ Coffee Shop</button>
+  <button class="scenario-chip" onclick="selectScenario(this, 'job interview')">💼 Job Interview</button>
   <button class="scenario-chip" onclick="selectScenario(this, 'airport')">✈️ Airport</button>
   <button class="scenario-chip" onclick="selectScenario(this, 'hotel check-in')">🏨 Hotel</button>
   <button class="scenario-chip" onclick="selectScenario(this, 'bar with friends')">🍺 Bar</button>
@@ -322,7 +307,6 @@
   <button class="scenario-chip" onclick="selectScenario(this, 'restaurant')">🍽️ Restaurant</button>
 </div>
 
-<!-- MODE 3 HEADER -->
 <div class="mode3-header" id="mode3Header" style="display:none;">
   <span>Tus errores guardados</span>
   <div class="mode3-toggle">
@@ -331,23 +315,11 @@
   </div>
 </div>
 
-<!-- MAIN CONTENT -->
 <div class="main-content">
-
-  <!-- CHAT (modes 1 & 2, and mode 3 practice) -->
-  <div class="chat-wrap" id="chatWrap">
-    <div class="empty-state" id="emptyState">
-      <div class="empty-icon">🌐</div>
-      <p>Selecciona un escenario y empieza la simulación. El bot te hablará primero.</p>
-    </div>
-  </div>
-
-  <!-- ERRORS PANEL (mode 3 review) -->
+  <div class="chat-wrap" id="chatWrap"></div>
   <div class="errors-panel" id="errorsPanel"></div>
-
 </div>
 
-<!-- INPUT -->
 <div class="input-area">
   <textarea id="userInput" placeholder="Write in English..." rows="1"
     onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
@@ -356,226 +328,160 @@
   </button>
 </div>
 
+<div class="toast" id="toast"></div>
 
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script>
 // ── CONFIG ──
-const API_URL  = "/api/chat";
-const MODEL    = "claude-sonnet-4-20250514";
-const SB_URL   = "https://ynoinlubuhyirznzgltn.supabase.co";
-const SB_KEY   = "sb_publishable_rUqzmfpIhz_U6pnI54JMhA_yRWXSOv6";
+const API_URL = "/API/chat";
+const MODEL   = "claude-sonnet-4-20250514";
+const SB_URL  = "https://ynoinlubuhyirznzgltn.supabase.co";
+const SB_KEY  = "sb_publishable_rUqzmfpIhz_U6pnI54JMhA_yRWXSOv6";
+const sb      = supabase.createClient(SB_URL, SB_KEY);
 
-const sb = supabase.createClient(SB_URL, SB_KEY);
-
-// ── USER ID (anon, persisted) ──
+// ── USER ID ──
 function getUserId() {
   let uid = localStorage.getItem('cotidioma_uid');
-  if (!uid) {
-    uid = 'user_' + Math.random().toString(36).slice(2, 11);
-    localStorage.setItem('cotidioma_uid', uid);
-  }
+  if (!uid) { uid = 'user_' + Math.random().toString(36).slice(2,11); localStorage.setItem('cotidioma_uid', uid); }
   return uid;
 }
 const USER_ID = getUserId();
 
 // ── STATE ──
 let state = {
-  mode: 1,
-  scenario: 'job interview',
-  history: { 1: [], 2: [], 3: [] },
-  errors: [],
-  level: null,
-  diagnosisCount: 0,
-  diagnosisDone: false,
-  mode3View: 'review',
+  mode: 1, scenario: 'coffee shop',
+  history: { 1:[], 2:[], 3:[] },
+  errors: [], level: null,
+  diagnosisDone: false, mode3View: 'review',
 };
 
-// ── SUPABASE PERSISTENCE ──
+// diagnosis chat history (separate)
+let diagHistory = [];
+let diagTurn = 0;
+const DIAG_TURNS = 5;
+
+// ── SUPABASE ──
 async function loadState() {
   try {
-    // Load profile
-    const { data: profile } = await sb
-      .from('profiles')
-      .select('*')
-      .eq('id', USER_ID)
-      .single();
-
+    const { data: profile } = await sb.from('profiles').select('*').eq('id', USER_ID).single();
     if (profile) {
-      state.level         = profile.level;
+      state.level        = profile.level;
       state.diagnosisDone = profile.diagnosis_done;
-      state.diagnosisCount= profile.diagnosis_count;
     }
-
-    // Load errors
-    const { data: errors } = await sb
-      .from('errors')
-      .select('*')
-      .eq('user_id', USER_ID)
-      .order('ts', { ascending: true });
-
-    if (errors && errors.length > 0) {
-      state.errors = errors.map(e => ({
-        wrong: e.wrong,
-        right: e.right_text,
-        why:   e.why,
-        mode:  e.mode,
-        ts:    e.ts,
-      }));
-    }
-
-    // Load history for all modes
-    const { data: histories } = await sb
-      .from('history')
-      .select('*')
-      .eq('user_id', USER_ID);
-
-    if (histories) {
-      histories.forEach(h => {
-        state.history[h.mode] = h.messages || [];
-      });
-    }
+    const { data: errors } = await sb.from('errors').select('*').eq('user_id', USER_ID).order('ts', { ascending: true });
+    if (errors?.length) state.errors = errors.map(e => ({ wrong:e.wrong, right:e.right_text, why:e.why, mode:e.mode, ts:e.ts }));
+    const { data: histories } = await sb.from('history').select('*').eq('user_id', USER_ID);
+    if (histories) histories.forEach(h => { state.history[h.mode] = h.messages || []; });
   } catch(e) {
-    console.warn('Supabase load failed, using localStorage fallback', e);
-    // localStorage fallback
-    try {
-      const saved = JSON.parse(localStorage.getItem('cotidioma_state') || '{}');
-      if (saved.level)          state.level          = saved.level;
-      if (saved.errors)         state.errors         = saved.errors;
-      if (saved.diagnosisDone)  state.diagnosisDone  = saved.diagnosisDone;
-      if (saved.diagnosisCount) state.diagnosisCount = saved.diagnosisCount;
-      if (saved.history)        state.history        = { ...state.history, ...saved.history };
-    } catch(e2) {}
+    const saved = JSON.parse(localStorage.getItem('cotidioma_state') || '{}');
+    if (saved.level)         state.level         = saved.level;
+    if (saved.diagnosisDone) state.diagnosisDone  = saved.diagnosisDone;
+    if (saved.errors)        state.errors         = saved.errors;
+    if (saved.history)       state.history        = { ...state.history, ...saved.history };
   }
-  updateLevelBadge();
 }
-
 async function saveProfile() {
   try {
-    await sb.from('profiles').upsert({
-      id:              USER_ID,
-      level:           state.level,
-      diagnosis_done:  state.diagnosisDone,
-      diagnosis_count: state.diagnosisCount,
-      updated_at:      new Date().toISOString(),
-    });
-  } catch(e) { console.warn('Profile save failed', e); }
-  // always mirror to localStorage
-  localStorage.setItem('cotidioma_state', JSON.stringify({
-    level: state.level, diagnosisDone: state.diagnosisDone,
-    diagnosisCount: state.diagnosisCount,
-  }));
+    await sb.from('profiles').upsert({ id:USER_ID, level:state.level, diagnosis_done:state.diagnosisDone, updated_at: new Date().toISOString() });
+  } catch(e) {}
+  localStorage.setItem('cotidioma_state', JSON.stringify({ level:state.level, diagnosisDone:state.diagnosisDone, errors:state.errors }));
 }
-
-async function saveError(correction) {
-  try {
-    await sb.from('errors').insert({
-      user_id:    USER_ID,
-      wrong:      correction.wrong,
-      right_text: correction.right,
-      why:        correction.why,
-      mode:       state.mode,
-      ts:         Date.now(),
-    });
-  } catch(e) { console.warn('Error save failed', e); }
+async function saveError(c) {
+  try { await sb.from('errors').insert({ user_id:USER_ID, wrong:c.wrong, right_text:c.right, why:c.why, mode:state.mode, ts:Date.now() }); } catch(e) {}
 }
-
 async function saveHistory(mode) {
-  try {
-    await sb.from('history').upsert({
-      user_id:    USER_ID,
-      mode:       mode,
-      messages:   state.history[mode],
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,mode' });
-  } catch(e) { console.warn('History save failed', e); }
+  try { await sb.from('history').upsert({ user_id:USER_ID, mode, messages:state.history[mode], updated_at:new Date().toISOString() }, { onConflict:'user_id,mode' }); } catch(e) {}
 }
 
-// ── SYSTEM PROMPTS ──
+// ── DIAGNOSIS SYSTEM PROMPT ──
+function getDiagnosisPrompt() {
+  return `You are COTIDIOMA, a friendly English coach for a Spanish-speaking beginner from Chile.
+Your ONLY goal right now: assess the user's English level through a natural, warm conversation in ${DIAG_TURNS} short turns.
+
+RULES — follow ALL of these strictly:
+- Use VERY simple English. Short sentences. Basic vocabulary. Like talking to a complete beginner.
+- Be warm, encouraging, never intimidating.
+- Ask ONE simple question per message. Examples: "What is your name?", "Do you like music?", "What do you do for work?", "Tell me one thing you did today."
+- Each question should be slightly more complex than the last — start extremely simple.
+- After turn ${DIAG_TURNS}, you MUST output this tag with the assessed level: <LEVEL>A1</LEVEL> or <LEVEL>A2</LEVEL> etc.
+- ALSO after turn ${DIAG_TURNS}, write a short warm message in Spanish telling the user their level and that the app is now calibrated for them. Example: "¡Listo! Tu nivel es A2. La app ahora está ajustada para ti 🎉"
+- Do NOT correct mistakes during diagnosis — just observe.
+- Do NOT output <LEVEL> before turn ${DIAG_TURNS}.`;
+}
+
+// ── MAIN SYSTEM PROMPTS ──
+function getLevelContext() {
+  if (!state.level) return "Assume the user is a beginner (A1-A2). Use very simple English.";
+  const ctx = {
+    'A1': "User level: A1 (complete beginner). Use extremely simple English: short sentences, basic vocabulary, present tense only. Speak slowly and clearly.",
+    'A2': "User level: A2 (elementary). Use simple English: short sentences, common vocabulary, simple past/present/future. Avoid idioms.",
+    'B1': "User level: B1 (intermediate). Use clear English with moderate vocabulary. Some idioms OK. Can handle past/present/future tenses.",
+    'B2': "User level: B2 (upper intermediate). Natural conversational English. Idioms welcome. Complex sentences fine.",
+    'C1': "User level: C1 (advanced). Rich vocabulary, complex structures, natural flow.",
+    'C2': "User level: C2 (mastery). Near-native level. Full complexity."
+  };
+  return ctx[state.level] || ctx['A2'];
+}
+
 function getSystemPrompt() {
-  const levelInfo = state.level
-    ? `The user's English level has been assessed as: ${state.level}.`
-    : `You have not assessed the user's level yet — do it through the first few natural exchanges.`;
-
-  if (!state.diagnosisDone && state.diagnosisCount < 5) {
-    return `You are COTIDIOMA, a friendly English coach for a Spanish-speaking user from Chile.
-${levelInfo}
-Your current goal: naturally assess their English level through conversation — do NOT make it feel like a test. Ask about their day, where they're from, what they like. After 3-5 messages, you'll know their level.
-IMPORTANT RULES:
-- ALWAYS correct their English mistakes inline in this exact JSON format inside your response — wrap corrections in <CORRECTIONS> tags:
-<CORRECTIONS>[{"wrong":"original text","right":"corrected text","why":"brief explanation in Spanish"}]</CORRECTIONS>
-- Respond conversationally in English (immersive).
-- Explain corrections in Spanish.
-- If there are no mistakes, do not include CORRECTIONS tags.
-- Be warm, encouraging, never condescending.
-- After message 5, output a level tag: <LEVEL>A1/A2/B1/B2/C1/C2</LEVEL>`;
-  }
-
+  const levelCtx = getLevelContext();
   const prompts = {
-    1: `You are COTIDIOMA, playing a role in a simulated English conversation scenario: "${state.scenario}".
-${levelInfo}
+    1: `You are COTIDIOMA playing a role in a simulated English scenario: "${state.scenario}".
+${levelCtx}
 RULES:
-- Stay fully in character for the scenario. Play the other person (interviewer, barista, receptionist, etc.).
-- After EACH user message: correct any English mistakes using <CORRECTIONS>[{"wrong":"...","right":"...","why":"... in Spanish"}]</CORRECTIONS>
+- Play the other person (barista, interviewer, receptionist, etc.) naturally.
+- ADAPT your language complexity to the user's level — if A1/A2, use very simple phrases.
+- After EACH user message, correct mistakes using: <CORRECTIONS>[{"wrong":"...","right":"...","why":"...en español"}]</CORRECTIONS>
 - If no mistakes, omit corrections.
-- Speak in natural English appropriate for the scenario.
-- Keep the simulation immersive and realistic.
-- Push the conversation forward naturally.`,
+- Push the conversation forward with ONE simple question or prompt.
+- Keep it fun and realistic.`,
 
-    2: `You are COTIDIOMA, having a casual daily check-in conversation in English with a Chilean user.
-${levelInfo}
+    2: `You are COTIDIOMA, having a casual daily check-in with a Chilean user learning English.
+${levelCtx}
 RULES:
-- Be like a friendly bilingual friend — ask about their day, how they feel, what happened, plans.
-- After EACH user message: correct English mistakes using <CORRECTIONS>[{"wrong":"...","right":"...","why":"... in Spanish"}]</CORRECTIONS>
+- Be a warm, friendly bilingual companion. Ask about their day in simple terms.
+- ADAPT your language to their level — A1/A2 means very simple questions, short sentences.
+- After EACH message, correct mistakes: <CORRECTIONS>[{"wrong":"...","right":"...","why":"...en español"}]</CORRECTIONS>
 - If no mistakes, omit corrections.
-- Respond in natural conversational English.
-- Keep it light, warm, real. Not a classroom.`,
+- Keep it real and encouraging. Not a classroom.`,
 
-    3: `You are COTIDIOMA, running a targeted English practice session for a Chilean user.
-${levelInfo}
-The user has made these mistakes in past sessions: ${JSON.stringify(state.errors.slice(-10))}
+    3: `You are COTIDIOMA running a targeted English practice session.
+${levelCtx}
+Past mistakes to target: ${JSON.stringify(state.errors.slice(-10))}
 RULES:
-- Create exercises to practice the exact patterns where they made mistakes.
-- Use fill-in-the-blank, rephrase challenges, or mini-dialogues targeting their weak spots.
-- After EACH user response: correct mistakes using <CORRECTIONS>[{"wrong":"...","right":"...","why":"... in Spanish"}]</CORRECTIONS>
-- Celebrate correct usage of previously-wrong patterns.
+- Create simple exercises targeting their past mistakes. Match the difficulty to their level.
+- For A1/A2: use fill-in-the-blank with 2-3 word answers, picture descriptions, simple yes/no questions.
+- Correct mistakes: <CORRECTIONS>[{"wrong":"...","right":"...","why":"...en español"}]</CORRECTIONS>
+- Celebrate when they use a previously-wrong pattern correctly.
 - Be encouraging and specific.`
   };
-
   return prompts[state.mode];
 }
 
 // ── PARSE RESPONSE ──
 function parseResponse(text) {
-  let corrections = [];
-  let level = null;
-  let clean = text;
-
+  let corrections = [], level = null, clean = text;
   const corrMatch = clean.match(/<CORRECTIONS>([\s\S]*?)<\/CORRECTIONS>/);
   if (corrMatch) {
     try { corrections = JSON.parse(corrMatch[1]); } catch(e) {}
     clean = clean.replace(/<CORRECTIONS>[\s\S]*?<\/CORRECTIONS>/, '').trim();
   }
   const lvlMatch = clean.match(/<LEVEL>(.*?)<\/LEVEL>/);
-  if (lvlMatch) {
-    level = lvlMatch[1].trim();
-    clean = clean.replace(/<LEVEL>.*?<\/LEVEL>/, '').trim();
-  }
+  if (lvlMatch) { level = lvlMatch[1].trim(); clean = clean.replace(/<LEVEL>.*?<\/LEVEL>/, '').trim(); }
   return { text: clean, corrections, level };
 }
 
-// ── RENDER BUBBLE ──
-function renderBubble(role, text, corrections = []) {
-  const wrap = document.getElementById('chatWrap');
-  const emptyState = document.getElementById('emptyState');
+// ── RENDER BUBBLE (shared) ──
+function renderBubble(role, text, corrections = [], container = 'chatWrap') {
+  const wrap = document.getElementById(container);
+  const emptyState = wrap.querySelector('.empty-state');
   if (emptyState) emptyState.remove();
 
   const msg = document.createElement('div');
   msg.className = `msg ${role}`;
-
   const avatar = document.createElement('div');
   avatar.className = 'avatar';
   avatar.textContent = role === 'bot' ? '🤖' : '👤';
-
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
   bubble.textContent = text;
@@ -585,187 +491,211 @@ function renderBubble(role, text, corrections = []) {
     corrDiv.className = 'correction';
     corrDiv.innerHTML = `<div class="label">✦ CORRECTION</div>`;
     corrections.forEach(c => {
-      corrDiv.innerHTML += `
-        <div class="corr-line">
-          <span class="wrong">${c.wrong}</span> → <span class="right">${c.right}</span>
-        </div>
-        <div class="explanation">${c.why}</div>`;
+      corrDiv.innerHTML += `<div class="corr-line"><span class="wrong">${c.wrong}</span> → <span class="right">${c.right}</span></div><div class="explanation">${c.why}</div>`;
     });
     bubble.appendChild(corrDiv);
-
-    // save each correction
-    corrections.forEach(c => {
-      const err = { ...c, mode: state.mode, ts: Date.now() };
-      state.errors.push(err);
-      saveError(err);
-    });
+    corrections.forEach(c => { const err = {...c, mode:state.mode, ts:Date.now()}; state.errors.push(err); saveError(err); });
   }
 
-  msg.appendChild(avatar);
-  msg.appendChild(bubble);
-  wrap.appendChild(msg);
-  wrap.scrollTop = wrap.scrollHeight;
+  msg.appendChild(avatar); msg.appendChild(bubble);
+  wrap.appendChild(msg); wrap.scrollTop = wrap.scrollHeight;
 }
 
-function showTyping() {
-  const wrap = document.getElementById('chatWrap');
+function showTyping(container = 'chatWrap') {
+  const wrap = document.getElementById(container);
   const t = document.createElement('div');
-  t.className = 'msg bot'; t.id = 'typingMsg';
+  t.className = 'msg bot'; t.id = `typing_${container}`;
   t.innerHTML = `<div class="avatar">🤖</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
-  wrap.appendChild(t);
-  wrap.scrollTop = wrap.scrollHeight;
+  wrap.appendChild(t); wrap.scrollTop = wrap.scrollHeight;
 }
-function removeTyping() {
-  const t = document.getElementById('typingMsg');
-  if (t) t.remove();
+function removeTyping(container = 'chatWrap') {
+  const t = document.getElementById(`typing_${container}`); if (t) t.remove();
 }
 
-// ── API CALL ──
-async function callClaude(userMsg) {
-  const history = state.history[state.mode];
-  history.push({ role: 'user', content: userMsg });
+// ── DIAGNOSIS FLOW ──
+async function startDiagnosis() {
+  diagHistory = []; diagTurn = 0;
+  updateDiagProgress();
+  const diagChat = document.getElementById('diagChat');
+  diagChat.innerHTML = '';
 
-  const messages = history.map(m => ({ role: m.role, content: m.content }));
+  showTyping('diagChat');
+  const firstMsg = "[Start the English level assessment. Greet the user warmly in very simple English and ask their name. Remember: extremely simple language, ONE question only.]";
+  diagHistory.push({ role:'user', content: firstMsg });
 
-  const resp = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: getSystemPrompt(), messages }),
-  });
-
-  const data = await resp.json();
-  const raw = data.content?.[0]?.text || 'Sorry, something went wrong.';
-  const { text, corrections, level } = parseResponse(raw);
-
-  history.push({ role: 'assistant', content: raw });
-  if (history.length > 20) history.splice(0, history.length - 20);
-  state.history[state.mode] = history;
-  saveHistory(state.mode);
-
-  if (!state.diagnosisDone) {
-    state.diagnosisCount++;
-    if (level) {
-      state.level = level;
-      state.diagnosisDone = true;
-      updateLevelBadge();
-    }
-    saveProfile();
+  try {
+    const resp = await fetch(API_URL, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:MODEL, max_tokens:300, system:getDiagnosisPrompt(), messages:diagHistory })
+    });
+    const data = await resp.json();
+    const raw = data.content?.[0]?.text || '';
+    const { text, level } = parseResponse(raw);
+    diagHistory.push({ role:'assistant', content: raw });
+    removeTyping('diagChat');
+    renderBubble('bot', text, [], 'diagChat');
+    diagTurn++;
+    updateDiagProgress();
+    if (level) finishDiagnosis(level, text);
+  } catch(e) {
+    removeTyping('diagChat');
+    renderBubble('bot', 'Connection error. Please refresh.', [], 'diagChat');
   }
-
-  return { text, corrections };
 }
 
-// ── SEND MESSAGE ──
-async function sendMessage() {
-  const input = document.getElementById('userInput');
-  const btn   = document.getElementById('sendBtn');
+async function sendDiagMessage() {
+  const input = document.getElementById('diagInput');
+  const btn   = document.getElementById('diagSendBtn');
   const msg   = input.value.trim();
   if (!msg || btn.classList.contains('disabled')) return;
 
   input.value = ''; autoResize(input);
   btn.classList.add('disabled');
-  renderBubble('user', msg);
-  showTyping();
+  renderBubble('user', msg, [], 'diagChat');
+  showTyping('diagChat');
+
+  diagHistory.push({ role:'user', content: msg });
 
   try {
-    const { text, corrections } = await callClaude(msg);
-    removeTyping();
-    renderBubble('bot', text, corrections);
+    const resp = await fetch(API_URL, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:MODEL, max_tokens:300, system:getDiagnosisPrompt(), messages:diagHistory })
+    });
+    const data = await resp.json();
+    const raw = data.content?.[0]?.text || '';
+    const { text, level } = parseResponse(raw);
+    diagHistory.push({ role:'assistant', content: raw });
+    diagTurn++;
+    updateDiagProgress();
+    removeTyping('diagChat');
+    renderBubble('bot', text, [], 'diagChat');
+    if (level) finishDiagnosis(level, text);
   } catch(e) {
-    removeTyping();
-    renderBubble('bot', 'Connection error. Please try again.');
+    removeTyping('diagChat');
+    renderBubble('bot', 'Error. Try again.', [], 'diagChat');
   }
 
+  btn.classList.remove('disabled');
+  document.getElementById('diagInput').focus();
+}
+
+function updateDiagProgress() {
+  const pct = Math.min((diagTurn / DIAG_TURNS) * 100, 100);
+  document.getElementById('diagFill').style.width = pct + '%';
+  document.getElementById('diagLabel').textContent = diagTurn >= DIAG_TURNS ? '¡Listo!' : `${diagTurn}/${DIAG_TURNS}`;
+}
+
+function finishDiagnosis(level, finalText) {
+  state.level = level;
+  state.diagnosisDone = true;
+  saveProfile();
+  updateLevelBadge();
+
+  // short delay then hide diagnosis screen
+  setTimeout(() => {
+    document.getElementById('diagnosisScreen').classList.add('hidden');
+    showToast(`Nivel ${level} detectado 🎯 ¡Empieza a practicar!`);
+    startScenario();
+  }, 3000);
+}
+
+function handleDiagKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendDiagMessage(); }
+}
+
+// ── MAIN APP ──
+async function callClaude(userMsg) {
+  const history = state.history[state.mode];
+  history.push({ role:'user', content:userMsg });
+  const resp = await fetch(API_URL, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ model:MODEL, max_tokens:600, system:getSystemPrompt(), messages:history.map(m=>({role:m.role,content:m.content})) })
+  });
+  const data = await resp.json();
+  const raw = data.content?.[0]?.text || 'Sorry, something went wrong.';
+  const { text, corrections } = parseResponse(raw);
+  history.push({ role:'assistant', content:raw });
+  if (history.length > 20) history.splice(0, history.length - 20);
+  state.history[state.mode] = history;
+  saveHistory(state.mode);
+  return { text, corrections };
+}
+
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const btn   = document.getElementById('sendBtn');
+  const msg   = input.value.trim();
+  if (!msg || btn.classList.contains('disabled')) return;
+  input.value = ''; autoResize(input);
+  btn.classList.add('disabled');
+  renderBubble('user', msg);
+  showTyping();
+  try {
+    const { text, corrections } = await callClaude(msg);
+    removeTyping(); renderBubble('bot', text, corrections);
+  } catch(e) { removeTyping(); renderBubble('bot', 'Connection error. Please try again.'); }
   btn.classList.remove('disabled');
   input.focus();
 }
 
-// ── BOT STARTS ──
 async function botStarts(initialPrompt) {
   const wrap = document.getElementById('chatWrap');
-  wrap.innerHTML = '';
-  showTyping();
-
+  wrap.innerHTML = ''; showTyping();
   const history = state.history[state.mode];
-  history.push({ role: 'user', content: initialPrompt });
-  const messages = history.map(m => ({ role: m.role, content: m.content }));
-
+  history.push({ role:'user', content:initialPrompt });
   try {
     const resp = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: getSystemPrompt(), messages }),
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:MODEL, max_tokens:600, system:getSystemPrompt(), messages:history.map(m=>({role:m.role,content:m.content})) })
     });
     const data = await resp.json();
-    const raw  = data.content?.[0]?.text || '';
-    const { text, corrections, level } = parseResponse(raw);
-
-    history.push({ role: 'assistant', content: raw });
+    const raw = data.content?.[0]?.text || '';
+    const { text, corrections } = parseResponse(raw);
+    history.push({ role:'assistant', content:raw });
     state.history[state.mode] = history;
     saveHistory(state.mode);
-
-    if (level) { state.level = level; state.diagnosisDone = true; saveProfile(); updateLevelBadge(); }
-    removeTyping();
-    renderBubble('bot', text, corrections);
-  } catch(e) {
-    removeTyping();
-    renderBubble('bot', 'Could not connect. Check your API key.');
-  }
+    removeTyping(); renderBubble('bot', text, corrections);
+  } catch(e) { removeTyping(); renderBubble('bot', 'Could not connect.'); }
 }
 
-// ── SWITCH MODE ──
 function switchMode(m) {
   state.mode = m;
   document.querySelectorAll('.mode-btn').forEach(b => {
     b.classList.remove('active-m1','active-m2','active-m3');
     if (parseInt(b.dataset.mode) === m) b.classList.add(`active-m${m}`);
   });
-  document.getElementById('scenarioPicker').classList.toggle('visible', m === 1);
-  document.getElementById('mode3Header').style.display = m === 3 ? 'flex' : 'none';
-
-  const chatWrap    = document.getElementById('chatWrap');
+  document.getElementById('scenarioPicker').classList.toggle('visible', m===1);
+  document.getElementById('mode3Header').style.display = m===3 ? 'flex' : 'none';
+  const chatWrap = document.getElementById('chatWrap');
   const errorsPanel = document.getElementById('errorsPanel');
-  chatWrap.innerHTML = '';
-  errorsPanel.classList.remove('visible');
-  chatWrap.style.display = 'flex';
+  chatWrap.innerHTML = ''; errorsPanel.classList.remove('visible'); chatWrap.style.display = 'flex';
 
-  if (m === 1) {
-    startScenario();
-  } else if (m === 2) {
+  if (m===1) { startScenario(); }
+  else if (m===2) {
     const starters = [
-      "[Start the daily check-in. Ask me how my day went in a friendly way. Keep it casual.]",
-      "[Start a morning check-in. Ask me about my plans for today.]",
-      "[It's afternoon. Ask me how my morning went and what I had for lunch.]",
-      "[Evening check-in. Ask me about the highlight of my day.]",
+      "[Start a casual daily check-in. Use VERY simple English matching the user's level. Ask ONE simple question about their day. Keep it short and friendly.]",
+      "[Say good morning in simple English. Ask ONE simple question: what will they do today?]",
+      "[It's evening. Ask in simple English: how was the day? ONE short question.]",
     ];
     state.history[2] = [];
-    botStarts(starters[Math.floor(Math.random() * starters.length)]);
-  } else if (m === 3) {
-    setMode3View('review');
-  }
+    botStarts(starters[Math.floor(Math.random()*starters.length)]);
+  } else if (m===3) { setMode3View('review'); }
 }
 
-// ── MODE 3 ──
 function setMode3View(view) {
   state.mode3View = view;
-  document.getElementById('btnReview').classList.toggle('active', view === 'review');
-  document.getElementById('btnPractice').classList.toggle('active', view === 'practice');
-
-  const chatWrap    = document.getElementById('chatWrap');
+  document.getElementById('btnReview').classList.toggle('active', view==='review');
+  document.getElementById('btnPractice').classList.toggle('active', view==='practice');
+  const chatWrap = document.getElementById('chatWrap');
   const errorsPanel = document.getElementById('errorsPanel');
-
-  if (view === 'review') {
-    chatWrap.style.display = 'none';
-    errorsPanel.classList.add('visible');
-    renderErrorsPanel();
+  if (view==='review') {
+    chatWrap.style.display='none'; errorsPanel.classList.add('visible'); renderErrorsPanel();
   } else {
-    errorsPanel.classList.remove('visible');
-    chatWrap.style.display = 'flex';
-    chatWrap.innerHTML = '';
-    state.history[3] = [];
-    const prompt = state.errors.length > 0
-      ? "[Start a focused practice session targeting my past mistakes. Create a short exercise.]"
-      : "[I have no past mistakes yet. Start a general English practice session appropriate for my level.]";
+    errorsPanel.classList.remove('visible'); chatWrap.style.display='flex'; chatWrap.innerHTML='';
+    state.history[3]=[];
+    const prompt = state.errors.length>0
+      ? "[Start a practice session targeting past mistakes. Use exercises simple enough for the user's level.]"
+      : "[Start a general English practice session. Match the difficulty to the user's level.]";
     botStarts(prompt);
   }
 }
@@ -773,59 +703,65 @@ function setMode3View(view) {
 function renderErrorsPanel() {
   const panel = document.getElementById('errorsPanel');
   panel.innerHTML = '';
-  if (state.errors.length === 0) {
+  if (state.errors.length===0) {
     panel.innerHTML = `<div class="no-errors"><div class="icon">✨</div><p>No errors yet! Start practicing and your mistakes will appear here for review.</p></div>`;
     return;
   }
-  const recent = [...state.errors].reverse().slice(0, 20);
-  const modeNames = { 1: 'Situación', 2: 'Día a Día', 3: 'Práctica' };
-  recent.forEach(e => {
-    const date = new Date(e.ts).toLocaleDateString('es-CL', { day:'2-digit', month:'short' });
-    panel.innerHTML += `
-      <div class="error-card">
-        <div class="meta">${modeNames[e.mode] || 'General'} · ${date}</div>
-        <div class="wrong-text">✗ ${e.wrong}</div>
-        <div class="right-text">✓ ${e.right}</div>
-        <div class="why">${e.why}</div>
-      </div>`;
+  const modeNames = {1:'Situación',2:'Día a Día',3:'Práctica'};
+  [...state.errors].reverse().slice(0,20).forEach(e => {
+    const date = new Date(e.ts).toLocaleDateString('es-CL',{day:'2-digit',month:'short'});
+    panel.innerHTML += `<div class="error-card">
+      <div class="meta">${modeNames[e.mode]||'General'} · ${date}</div>
+      <div class="wrong-text">✗ ${e.wrong}</div>
+      <div class="right-text">✓ ${e.right}</div>
+      <div class="why">${e.why}</div>
+    </div>`;
   });
 }
 
-// ── SCENARIOS ──
 function selectScenario(el, scenario) {
-  document.querySelectorAll('.scenario-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  state.scenario = scenario;
-  startScenario();
+  document.querySelectorAll('.scenario-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active'); state.scenario = scenario; startScenario();
 }
 
 function startScenario() {
-  state.history[1] = [];
-  const trigger = `[Start the simulation for scenario: "${state.scenario}". You play the other person. Set the scene briefly and begin naturally. I am the customer/candidate/guest.]`;
+  state.history[1]=[];
+  const trigger = `[Start the scenario: "${state.scenario}". Play the other person. Use language appropriate for a ${state.level||'beginner'} English learner — keep it simple if they're A1/A2. Set the scene in ONE short sentence and ask ONE simple opening question.]`;
   botStarts(trigger);
 }
 
+function resetLevel() {
+  if (!confirm('¿Repetir el diagnóstico de nivel?')) return;
+  state.level = null; state.diagnosisDone = false;
+  saveProfile(); updateLevelBadge();
+  document.getElementById('diagnosisScreen').classList.remove('hidden');
+  startDiagnosis();
+}
+
 // ── UTILS ──
-function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-}
-function autoResize(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-}
+function handleKey(e) { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
 function updateLevelBadge() {
   const badge = document.getElementById('levelBadge');
-  if (state.level) {
-    badge.textContent = state.level;
-    badge.classList.add('known');
-  } else {
-    badge.textContent = 'Calibrating...';
-    badge.classList.remove('known');
-  }
+  if (state.level) { badge.textContent=state.level; badge.classList.add('known'); }
+  else { badge.textContent='Calibrating...'; badge.classList.remove('known'); }
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
 }
 
 // ── INIT ──
-loadState().then(() => startScenario());
+loadState().then(() => {
+  updateLevelBadge();
+  if (state.diagnosisDone && state.level) {
+    document.getElementById('diagnosisScreen').classList.add('hidden');
+    startScenario();
+  } else {
+    startDiagnosis();
+  }
+});
 </script>
 </body>
 </html>
