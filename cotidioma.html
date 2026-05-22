@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LINGO — Tu Coach de Inglés</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #151821;
+    --surface2: #1c2130;
+    --border: #252c3d;
+    --accent: #4f8fff;
+    --accent2: #ff6b6b;
+    --accent3: #50e3b4;
+    --gold: #f5c842;
+    --text: #e8ecf4;
+    --muted: #6b7590;
+    --mode1: #4f8fff;
+    --mode2: #50e3b4;
+    --mode3: #f5c842;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: .5;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    position: relative; z-index: 10;
+    background: rgba(13,15,20,0.8);
+    backdrop-filter: blur(12px);
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 20px;
+    letter-spacing: 0.08em;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  .level-badge {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700;
+    padding: 4px 10px; border-radius: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+  .level-badge.known { color: var(--accent3); border-color: rgba(80,227,180,0.3); }
+
+  /* ── MODE SELECTOR ── */
+  .mode-bar {
+    display: flex; gap: 8px; padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    position: relative; z-index: 10;
+    overflow-x: auto;
+  }
+  .mode-bar::-webkit-scrollbar { display: none; }
+
+  .mode-btn {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 14px; border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer; white-space: nowrap;
+    transition: all .2s;
+  }
+  .mode-btn .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor; opacity: .5;
+  }
+  .mode-btn:hover { background: var(--surface2); color: var(--text); }
+  .mode-btn.active-m1 { background: rgba(79,143,255,0.12); border-color: rgba(79,143,255,0.4); color: var(--mode1); }
+  .mode-btn.active-m2 { background: rgba(80,227,180,0.10); border-color: rgba(80,227,180,0.35); color: var(--mode2); }
+  .mode-btn.active-m3 { background: rgba(245,200,66,0.10); border-color: rgba(245,200,66,0.35); color: var(--mode3); }
+  .mode-btn.active-m1 .dot, .mode-btn.active-m2 .dot, .mode-btn.active-m3 .dot { opacity: 1; }
+
+  /* ── SCENARIO PICKER (mode 1) ── */
+  .scenario-picker {
+    display: none; flex-wrap: wrap; gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(79,143,255,0.04);
+  }
+  .scenario-picker.visible { display: flex; }
+  .scenario-chip {
+    padding: 5px 12px; border-radius: 20px;
+    border: 1px solid rgba(79,143,255,0.25);
+    background: transparent; color: var(--muted);
+    font-size: 12px; cursor: pointer; transition: all .15s;
+  }
+  .scenario-chip:hover, .scenario-chip.active { 
+    background: rgba(79,143,255,0.15); 
+    border-color: var(--mode1); color: var(--text); 
+  }
+
+  /* ── CHAT AREA ── */
+  .chat-wrap {
+    flex: 1; overflow-y: auto;
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+    position: relative; z-index: 1;
+  }
+  .chat-wrap::-webkit-scrollbar { width: 4px; }
+  .chat-wrap::-webkit-scrollbar-track { background: transparent; }
+  .chat-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* message bubbles */
+  .msg { display: flex; gap: 10px; animation: fadeUp .3s ease; max-width: 100%; }
+  @keyframes fadeUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+
+  .msg.user { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 32px; height: 32px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; flex-shrink: 0;
+    background: var(--surface2);
+  }
+  .msg.bot .avatar { background: linear-gradient(135deg, rgba(79,143,255,0.3), rgba(80,227,180,0.3)); }
+
+  .bubble {
+    max-width: calc(100% - 80px);
+    padding: 11px 14px; border-radius: 14px;
+    line-height: 1.55; font-size: 14px;
+  }
+  .msg.bot .bubble {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top-left-radius: 4px;
+  }
+  .msg.user .bubble {
+    background: rgba(79,143,255,0.15);
+    border: 1px solid rgba(79,143,255,0.25);
+    border-top-right-radius: 4px;
+    color: #c8d8ff;
+  }
+
+  /* correction block inside bubble */
+  .correction {
+    margin-top: 10px; padding: 10px 12px;
+    border-radius: 8px;
+    background: rgba(245,200,66,0.07);
+    border-left: 3px solid var(--gold);
+    font-size: 13px;
+  }
+  .correction .label {
+    font-family: 'Syne', sans-serif;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: .1em; color: var(--gold);
+    margin-bottom: 5px;
+  }
+  .corr-line { margin: 3px 0; }
+  .corr-line .wrong { color: var(--accent2); text-decoration: line-through; }
+  .corr-line .right { color: var(--accent3); }
+  .explanation { margin-top: 6px; color: var(--muted); font-size: 12px; font-style: italic; }
+
+  /* typing indicator */
+  .typing { display: flex; gap: 5px; align-items: center; padding: 14px; }
+  .typing span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted);
+    animation: bounce 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: .2s; }
+  .typing span:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+
+  /* empty state */
+  .empty-state {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    flex: 1; gap: 12px; color: var(--muted);
+    text-align: center; padding: 40px 20px;
+  }
+  .empty-icon { font-size: 48px; }
+  .empty-state p { font-size: 13px; line-height: 1.6; max-width: 260px; }
+
+  /* ── INPUT ── */
+  .input-area {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 10px; align-items: flex-end;
+    background: rgba(13,15,20,0.9);
+    backdrop-filter: blur(12px);
+    position: relative; z-index: 10;
+  }
+
+  textarea {
+    flex: 1; resize: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 14px;
+    color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 14px; line-height: 1.5;
+    outline: none; transition: border-color .2s;
+    max-height: 120px; min-height: 44px;
+  }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--muted); }
+
+  .send-btn {
+    width: 44px; height: 44px; border-radius: 12px;
+    border: none; cursor: pointer;
+    background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s; flex-shrink: 0;
+  }
+  .send-btn:hover { background: #6fa3ff; transform: scale(1.05); }
+  .send-btn:active { transform: scale(.96); }
+  .send-btn svg { width: 18px; height: 18px; fill: white; }
+  .send-btn.disabled { background: var(--surface2); cursor: not-allowed; opacity: .5; }
+
+  /* ── ERRORS PANEL (mode 3) ── */
+  .errors-panel {
+    display: none; flex-direction: column; gap: 10px;
+    padding: 16px; overflow-y: auto; flex: 1;
+  }
+  .errors-panel.visible { display: flex; }
+  .error-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px;
+    border-left: 3px solid var(--gold);
+  }
+  .error-card .meta {
+    font-size: 11px; color: var(--muted); margin-bottom: 8px;
+    font-family: 'Syne', sans-serif; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .error-card .wrong-text { color: var(--accent2); font-size: 14px; margin-bottom: 4px; }
+  .error-card .right-text { color: var(--accent3); font-size: 14px; font-weight: 500; }
+  .error-card .why { color: var(--muted); font-size: 12px; margin-top: 8px; font-style: italic; }
+
+  .no-errors {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 10px; color: var(--muted); text-align: center;
+    padding: 60px 20px; font-size: 13px;
+  }
+  .no-errors .icon { font-size: 48px; }
+
+  /* mode3 chat mode */
+  .mode3-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    font-size: 12px; color: var(--muted);
+  }
+  .mode3-toggle {
+    display: flex; gap: 6px;
+  }
+  .toggle-btn {
+    padding: 4px 10px; border-radius: 8px; font-size: 12px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--muted); cursor: pointer; transition: all .15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .toggle-btn.active { background: rgba(245,200,66,0.12); border-color: var(--mode3); color: var(--mode3); }
+
+  /* ── RESPONSIVE SCROLL FIX ── */
+  .main-content {
+    flex: 1; display: flex; flex-direction: column;
+    overflow: hidden; min-height: 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">LINGO</div>
+  <div class="level-badge" id="levelBadge">Calibrating...</div>
+</header>
+
+<!-- MODE BAR -->
+<div class="mode-bar">
+  <button class="mode-btn active-m1" data-mode="1" onclick="switchMode(1)">
+    <span class="dot"></span> Situaciones
+  </button>
+  <button class="mode-btn" data-mode="2" onclick="switchMode(2)">
+    <span class="dot"></span> Día a Día
+  </button>
+  <button class="mode-btn" data-mode="3" onclick="switchMode(3)">
+    <span class="dot"></span> Mis Frases
+  </button>
+</div>
+
+<!-- SCENARIO PICKER (mode 1) -->
+<div class="scenario-picker visible" id="scenarioPicker">
+  <button class="scenario-chip active" onclick="selectScenario(this, 'job interview')">💼 Job Interview</button>
+  <button class="scenario-chip" onclick="selectScenario(this, 'coffee shop')">☕ Coffee Shop</button>
+  <button class="scenario-chip" onclick="selectScenario(this, 'airport')">✈️ Airport</button>
+  <button class="scenario-chip" onclick="selectScenario(this, 'hotel check-in')">🏨 Hotel</button>
+  <button class="scenario-chip" onclick="selectScenario(this, 'bar with friends')">🍺 Bar</button>
+  <button class="scenario-chip" onclick="selectScenario(this, 'doctor appointment')">🏥 Doctor</button>
+  <button class="scenario-chip" onclick="selectScenario(this, 'business meeting')">📊 Meeting</button>
+  <button class="scenario-chip" onclick="selectScenario(this, 'restaurant')">🍽️ Restaurant</button>
+</div>
+
+<!-- MODE 3 HEADER -->
+<div class="mode3-header" id="mode3Header" style="display:none;">
+  <span>Tus errores guardados</span>
+  <div class="mode3-toggle">
+    <button class="toggle-btn active" id="btnReview" onclick="setMode3View('review')">Revisar</button>
+    <button class="toggle-btn" id="btnPractice" onclick="setMode3View('practice')">Practicar</button>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main-content">
+
+  <!-- CHAT (modes 1 & 2, and mode 3 practice) -->
+  <div class="chat-wrap" id="chatWrap">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🌐</div>
+      <p>Selecciona un escenario y empieza la simulación. El bot te hablará primero.</p>
+    </div>
+  </div>
+
+  <!-- ERRORS PANEL (mode 3 review) -->
+  <div class="errors-panel" id="errorsPanel"></div>
+
+</div>
+
+<!-- INPUT -->
+<div class="input-area">
+  <textarea id="userInput" placeholder="Write in English..." rows="1"
+    onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+  <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+    <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+  </button>
+</div>
+
+<script>
+// ── STATE ──
+const API_URL = "https://api.anthropic.com/v1/messages";
+const MODEL   = "claude-sonnet-4-20250514";
+
+let state = {
+  mode: 1,
+  scenario: 'job interview',
+  history: { 1: [], 2: [], 3: [] },
+  errors: [],
+  level: null,
+  diagnosisCount: 0,
+  diagnosisDone: false,
+  mode3View: 'review',
+};
+
+// load from localStorage
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('lingo_state') || '{}');
+    if (saved.level)         state.level = saved.level;
+    if (saved.errors)        state.errors = saved.errors;
+    if (saved.diagnosisDone) state.diagnosisDone = saved.diagnosisDone;
+    if (saved.history)       state.history = { ...state.history, ...saved.history };
+  } catch(e) {}
+  updateLevelBadge();
+}
+
+function saveState() {
+  localStorage.setItem('lingo_state', JSON.stringify({
+    level: state.level,
+    errors: state.errors,
+    diagnosisDone: state.diagnosisDone,
+    history: state.history,
+  }));
+}
+
+// ── SYSTEM PROMPTS ──
+function getSystemPrompt() {
+  const levelInfo = state.level
+    ? `The user's English level has been assessed as: ${state.level}.`
+    : `You have not assessed the user's level yet — do it through the first few natural exchanges.`;
+
+  if (!state.diagnosisDone && state.diagnosisCount < 5) {
+    return `You are LINGO, a friendly English coach for a Spanish-speaking user from Chile.
+${levelInfo}
+Your current goal: naturally assess their English level through conversation — do NOT make it feel like a test. Ask about their day, where they're from, what they like. After 3-5 messages, you'll know their level.
+IMPORTANT RULES:
+- ALWAYS correct their English mistakes inline in this exact JSON format inside your response — wrap corrections in <CORRECTIONS> tags:
+<CORRECTIONS>[{"wrong":"original text","right":"corrected text","why":"brief explanation in Spanish"}]</CORRECTIONS>
+- Respond conversationally in English (immersive).
+- Explain corrections in Spanish.
+- If there are no mistakes, do not include CORRECTIONS tags.
+- Be warm, encouraging, never condescending.
+- After message 5, output a level tag: <LEVEL>A1/A2/B1/B2/C1/C2</LEVEL>`;
+  }
+
+  const prompts = {
+    1: `You are LINGO, playing a role in a simulated English conversation scenario: "${state.scenario}".
+${levelInfo}
+RULES:
+- Stay fully in character for the scenario. Play the other person (interviewer, barista, receptionist, etc.).
+- After EACH user message: correct any English mistakes using <CORRECTIONS>[{"wrong":"...","right":"...","why":"... in Spanish"}]</CORRECTIONS>
+- If no mistakes, omit corrections.
+- Speak in natural English appropriate for the scenario.
+- Keep the simulation immersive and realistic.
+- Push the conversation forward naturally.`,
+
+    2: `You are LINGO, having a casual daily check-in conversation in English with a Chilean user.
+${levelInfo}
+RULES:
+- Be like a friendly bilingual friend — ask about their day, how they feel, what happened, plans.
+- After EACH user message: correct English mistakes using <CORRECTIONS>[{"wrong":"...","right":"...","why":"... in Spanish"}]</CORRECTIONS>
+- If no mistakes, omit corrections.
+- Respond in natural conversational English.
+- Keep it light, warm, real. Not a classroom.`,
+
+    3: `You are LINGO, running a targeted English practice session for a Chilean user.
+${levelInfo}
+The user has made these mistakes in past sessions: ${JSON.stringify(state.errors.slice(-10))}
+RULES:
+- Create exercises to practice the exact patterns where they made mistakes.
+- Use fill-in-the-blank, rephrase challenges, or mini-dialogues targeting their weak spots.
+- After EACH user response: correct mistakes using <CORRECTIONS>[{"wrong":"...","right":"...","why":"... in Spanish"}]</CORRECTIONS>
+- Celebrate correct usage of previously-wrong patterns. 
+- Be encouraging and specific.`
+  };
+
+  return prompts[state.mode];
+}
+
+// ── PARSE RESPONSE ──
+function parseResponse(text) {
+  let corrections = [];
+  let level = null;
+  let clean = text;
+
+  const corrMatch = clean.match(/<CORRECTIONS>([\s\S]*?)<\/CORRECTIONS>/);
+  if (corrMatch) {
+    try { corrections = JSON.parse(corrMatch[1]); } catch(e) {}
+    clean = clean.replace(/<CORRECTIONS>[\s\S]*?<\/CORRECTIONS>/, '').trim();
+  }
+  const lvlMatch = clean.match(/<LEVEL>(.*?)<\/LEVEL>/);
+  if (lvlMatch) {
+    level = lvlMatch[1].trim();
+    clean = clean.replace(/<LEVEL>.*?<\/LEVEL>/, '').trim();
+  }
+
+  return { text: clean, corrections, level };
+}
+
+// ── RENDER BUBBLE ──
+function renderBubble(role, text, corrections = []) {
+  const wrap = document.getElementById('chatWrap');
+  const emptyState = document.getElementById('emptyState');
+  if (emptyState) emptyState.remove();
+
+  const msg = document.createElement('div');
+  msg.className = `msg ${role}`;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.textContent = role === 'bot' ? '🤖' : '👤';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.textContent = text;
+
+  if (corrections.length > 0) {
+    const corrDiv = document.createElement('div');
+    corrDiv.className = 'correction';
+    corrDiv.innerHTML = `<div class="label">✦ CORRECTION</div>`;
+    corrections.forEach(c => {
+      corrDiv.innerHTML += `
+        <div class="corr-line">
+          <span class="wrong">${c.wrong}</span> → <span class="right">${c.right}</span>
+        </div>
+        <div class="explanation">${c.why}</div>`;
+    });
+    bubble.appendChild(corrDiv);
+
+    // save to errors
+    corrections.forEach(c => {
+      state.errors.push({ ...c, mode: state.mode, ts: Date.now() });
+    });
+    saveState();
+  }
+
+  msg.appendChild(avatar);
+  msg.appendChild(bubble);
+  wrap.appendChild(msg);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function showTyping() {
+  const wrap = document.getElementById('chatWrap');
+  const t = document.createElement('div');
+  t.className = 'msg bot'; t.id = 'typingMsg';
+  t.innerHTML = `<div class="avatar">🤖</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+  wrap.appendChild(t);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+function removeTyping() {
+  const t = document.getElementById('typingMsg');
+  if (t) t.remove();
+}
+
+// ── API CALL ──
+async function callClaude(userMsg) {
+  const history = state.history[state.mode];
+  history.push({ role: 'user', content: userMsg });
+
+  const messages = history.map(m => ({ role: m.role, content: m.content }));
+
+  const resp = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 1000,
+      system: getSystemPrompt(),
+      messages,
+    })
+  });
+
+  const data = await resp.json();
+  const raw = data.content?.[0]?.text || 'Sorry, something went wrong.';
+  const { text, corrections, level } = parseResponse(raw);
+
+  history.push({ role: 'assistant', content: raw });
+  // keep last 20 turns
+  if (history.length > 20) history.splice(0, history.length - 20);
+  state.history[state.mode] = history;
+  saveState();
+
+  // diagnosis logic
+  if (!state.diagnosisDone) {
+    state.diagnosisCount++;
+    if (level) {
+      state.level = level;
+      state.diagnosisDone = true;
+      saveState();
+      updateLevelBadge();
+    }
+  }
+
+  return { text, corrections };
+}
+
+// ── SEND MESSAGE ──
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const btn = document.getElementById('sendBtn');
+  const msg = input.value.trim();
+  if (!msg || btn.classList.contains('disabled')) return;
+
+  input.value = ''; autoResize(input);
+  btn.classList.add('disabled');
+
+  // user bubble
+  renderBubble('user', msg);
+
+  // typing
+  showTyping();
+
+  try {
+    const { text, corrections } = await callClaude(msg);
+    removeTyping();
+    renderBubble('bot', text, corrections);
+  } catch(e) {
+    removeTyping();
+    renderBubble('bot', 'Connection error. Please try again.');
+  }
+
+  btn.classList.remove('disabled');
+  input.focus();
+}
+
+// ── START BOT FIRST ──
+async function botStarts(initialPrompt) {
+  const wrap = document.getElementById('chatWrap');
+  // clear chat
+  wrap.innerHTML = '';
+  showTyping();
+
+  const history = state.history[state.mode];
+  // inject a system trigger
+  history.push({ role: 'user', content: initialPrompt });
+
+  const messages = history.map(m => ({ role: m.role, content: m.content }));
+  try {
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 1000,
+        system: getSystemPrompt(),
+        messages,
+      })
+    });
+    const data = await resp.json();
+    const raw = data.content?.[0]?.text || '';
+    const { text, corrections, level } = parseResponse(raw);
+
+    history.push({ role: 'assistant', content: raw });
+    state.history[state.mode] = history;
+    saveState();
+
+    if (level) { state.level = level; state.diagnosisDone = true; saveState(); updateLevelBadge(); }
+    removeTyping();
+    renderBubble('bot', text, corrections);
+  } catch(e) {
+    removeTyping();
+    renderBubble('bot', 'Could not connect. Check your API key.');
+  }
+}
+
+// ── SWITCH MODE ──
+function switchMode(m) {
+  state.mode = m;
+
+  // update buttons
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.classList.remove('active-m1','active-m2','active-m3');
+    if (parseInt(b.dataset.mode) === m) b.classList.add(`active-m${m}`);
+  });
+
+  // show/hide scenario picker
+  document.getElementById('scenarioPicker').classList.toggle('visible', m === 1);
+  document.getElementById('mode3Header').style.display = m === 3 ? 'flex' : 'none';
+
+  // reset view
+  const chatWrap = document.getElementById('chatWrap');
+  const errorsPanel = document.getElementById('errorsPanel');
+  chatWrap.innerHTML = '';
+  errorsPanel.classList.remove('visible');
+  chatWrap.style.display = 'flex';
+
+  if (m === 1) {
+    // start scenario
+    startScenario();
+  } else if (m === 2) {
+    // daily conversation — bot starts
+    const starters = [
+      "[Start the daily check-in. Ask me how my day went in a friendly way. Keep it casual.]",
+      "[Start a morning check-in. Ask me about my plans for today.]",
+      "[It's afternoon. Ask me how my morning went and what I had for lunch.]",
+      "[Evening check-in. Ask me about the highlight of my day.]",
+    ];
+    const pick = starters[Math.floor(Math.random() * starters.length)];
+    state.history[2] = [];
+    botStarts(pick);
+  } else if (m === 3) {
+    setMode3View('review');
+  }
+}
+
+// ── MODE 3 VIEWS ──
+function setMode3View(view) {
+  state.mode3View = view;
+  document.getElementById('btnReview').classList.toggle('active', view === 'review');
+  document.getElementById('btnPractice').classList.toggle('active', view === 'practice');
+
+  const chatWrap = document.getElementById('chatWrap');
+  const errorsPanel = document.getElementById('errorsPanel');
+
+  if (view === 'review') {
+    chatWrap.style.display = 'none';
+    errorsPanel.classList.add('visible');
+    renderErrorsPanel();
+  } else {
+    errorsPanel.classList.remove('visible');
+    chatWrap.style.display = 'flex';
+    chatWrap.innerHTML = '';
+    state.history[3] = [];
+    const prompt = state.errors.length > 0
+      ? "[Start a focused practice session targeting my past mistakes. Create a short exercise.]"
+      : "[I have no past mistakes yet. Start a general English practice session appropriate for my level.]";
+    botStarts(prompt);
+  }
+}
+
+function renderErrorsPanel() {
+  const panel = document.getElementById('errorsPanel');
+  panel.innerHTML = '';
+  if (state.errors.length === 0) {
+    panel.innerHTML = `<div class="no-errors"><div class="icon">✨</div><p>No errors yet! Start practicing and your mistakes will appear here for review.</p></div>`;
+    return;
+  }
+  // show last 20, newest first
+  const recent = [...state.errors].reverse().slice(0, 20);
+  recent.forEach((e, i) => {
+    const modeNames = { 1: 'Situación', 2: 'Día a Día', 3: 'Práctica' };
+    const date = new Date(e.ts).toLocaleDateString('es-CL', { day:'2-digit', month:'short' });
+    panel.innerHTML += `
+      <div class="error-card">
+        <div class="meta">${modeNames[e.mode] || 'General'} · ${date}</div>
+        <div class="wrong-text">✗ ${e.wrong}</div>
+        <div class="right-text">✓ ${e.right}</div>
+        <div class="why">${e.why}</div>
+      </div>`;
+  });
+}
+
+// ── SCENARIOS ──
+function selectScenario(el, scenario) {
+  document.querySelectorAll('.scenario-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  state.scenario = scenario;
+  startScenario();
+}
+
+function startScenario() {
+  state.history[1] = [];
+  const trigger = `[Start the simulation for scenario: "${state.scenario}". You play the other person. Set the scene briefly and begin naturally. I am the customer/candidate/guest.]`;
+  botStarts(trigger);
+}
+
+// ── UTILS ──
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function updateLevelBadge() {
+  const badge = document.getElementById('levelBadge');
+  if (state.level) {
+    badge.textContent = state.level;
+    badge.classList.add('known');
+  } else {
+    badge.textContent = 'Calibrating...';
+    badge.classList.remove('known');
+  }
+}
+
+// ── INIT ──
+loadState();
+// start with mode 1 default scenario
+startScenario();
+</script>
+</body>
+</html>
