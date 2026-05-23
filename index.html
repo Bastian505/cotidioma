@@ -249,6 +249,46 @@
   .toggle-btn.active { background: rgba(153,197,255,0.2); border-color: var(--mode3); color: #4a7ab5; }
  
   .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+
+  /* ── CUSTOM SCENARIO ── */
+  .custom-scenario-wrap {
+    display: none; align-items: center; gap: 8px;
+    padding: 8px 16px 10px; border-bottom: 1px solid var(--border);
+    background: rgba(41,181,197,0.03);
+  }
+  .custom-scenario-wrap.visible { display: flex; }
+  .custom-scenario-input {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 12px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--text); outline: none; transition: border-color .2s;
+  }
+  .custom-scenario-input:focus { border-color: var(--accent); }
+  .custom-scenario-input::placeholder { color: var(--muted); }
+  .custom-go-btn {
+    padding: 8px 14px; border-radius: 10px; border: none; cursor: pointer;
+    background: var(--accent); color: white; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500; transition: all .2s; white-space: nowrap;
+  }
+  .custom-go-btn:hover { background: #22a0af; }
+
+  /* ── HELP BUTTONS ── */
+  .help-bar {
+    display: none; gap: 6px; padding: 8px 16px;
+    border-top: 1px solid var(--border);
+    background: rgba(255,255,255,0.95);
+    overflow-x: auto; flex-shrink: 0;
+  }
+  .help-bar::-webkit-scrollbar { display: none; }
+  .help-bar.visible { display: flex; }
+  .help-btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 6px 12px; border-radius: 20px; white-space: nowrap;
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 12px; cursor: pointer; transition: all .2s;
+  }
+  .help-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(41,181,197,0.06); }
+  .help-btn .hicon { font-size: 13px; }
  
   /* ── LEVEL UP TOAST ── */
   .toast {
@@ -305,6 +345,15 @@
   <button class="scenario-chip" onclick="selectScenario(this, 'doctor appointment')">🏥 Doctor</button>
   <button class="scenario-chip" onclick="selectScenario(this, 'business meeting')">📊 Meeting</button>
   <button class="scenario-chip" onclick="selectScenario(this, 'restaurant')">🍽️ Restaurant</button>
+  <button class="scenario-chip" id="customChip" onclick="toggleCustomScenario(this)">✏️ Custom</button>
+</div>
+
+<!-- CUSTOM SCENARIO INPUT -->
+<div class="custom-scenario-wrap" id="customScenarioWrap">
+  <input type="text" class="custom-scenario-input" id="customScenarioInput"
+    placeholder="Describe the situation... e.g. 'I'm at a hardware store looking for screws'"
+    onkeydown="if(event.key==='Enter') startCustomScenario()" maxlength="200" />
+  <button class="custom-go-btn" onclick="startCustomScenario()">Start ▶</button>
 </div>
 
 <div class="mode3-header" id="mode3Header" style="display:none;">
@@ -318,6 +367,13 @@
 <div class="main-content">
   <div class="chat-wrap" id="chatWrap"></div>
   <div class="errors-panel" id="errorsPanel"></div>
+</div>
+
+<!-- HELP BUTTONS (mode 1 & 2) -->
+<div class="help-bar" id="helpBar">
+  <button class="help-btn" onclick="helpRequest('understand')"><span class="hicon">🤔</span> No entiendo</button>
+  <button class="help-btn" onclick="helpRequest('respond')"><span class="hicon">💬</span> No sé cómo responder</button>
+  <button class="help-btn" onclick="helpRequest('word')"><span class="hicon">📖</span> No entiendo una palabra</button>
 </div>
 
 <div class="input-area">
@@ -666,6 +722,8 @@ function switchMode(m) {
   });
   document.getElementById('scenarioPicker').classList.toggle('visible', m===1);
   document.getElementById('mode3Header').style.display = m===3 ? 'flex' : 'none';
+  document.getElementById('helpBar').classList.toggle('visible', m===1 || m===2);
+  document.getElementById('customScenarioWrap').classList.remove('visible');
   const chatWrap = document.getElementById('chatWrap');
   const errorsPanel = document.getElementById('errorsPanel');
   chatWrap.innerHTML = ''; errorsPanel.classList.remove('visible'); chatWrap.style.display = 'flex';
@@ -721,13 +779,76 @@ function renderErrorsPanel() {
 
 function selectScenario(el, scenario) {
   document.querySelectorAll('.scenario-chip').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active'); state.scenario = scenario; startScenario();
+  el.classList.add('active'); state.scenario = scenario;
+  // hide custom input if open
+  document.getElementById('customScenarioWrap').classList.remove('visible');
+  startScenario();
+}
+
+function toggleCustomScenario(el) {
+  document.querySelectorAll('.scenario-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  const wrap = document.getElementById('customScenarioWrap');
+  wrap.classList.toggle('visible');
+  if (wrap.classList.contains('visible')) {
+    document.getElementById('customScenarioInput').focus();
+  }
+}
+
+function startCustomScenario() {
+  const input = document.getElementById('customScenarioInput');
+  const val = input.value.trim();
+  if (!val) { input.focus(); return; }
+  state.scenario = val;
+  startScenario();
 }
 
 function startScenario() {
   state.history[1]=[];
   const trigger = `[Start the scenario: "${state.scenario}". Play the other person. Use language appropriate for a ${state.level||'beginner'} English learner — keep it simple if they're A1/A2. Set the scene in ONE short sentence and ask ONE simple opening question.]`;
   botStarts(trigger);
+}
+
+// ── HELP BUTTONS ──
+function helpRequest(type) {
+  const helpBar = document.getElementById('helpBar');
+  helpBar.querySelectorAll('.help-btn').forEach(b => b.disabled = true);
+
+  if (type === 'word') {
+    // ask which word
+    const word = prompt('¿Qué palabra no entiendes? (What word?)');
+    helpBar.querySelectorAll('.help-btn').forEach(b => b.disabled = false);
+    if (!word || !word.trim()) return;
+    injectHelpMessage(`[The user doesn't understand the word "${word.trim()}". Explain it in very simple English with an example sentence, then also give a brief Spanish explanation. Keep it short.]`);
+  } else if (type === 'understand') {
+    injectHelpMessage(`[The user didn't understand your last message. Please rephrase it using much simpler English — shorter sentences, basic vocabulary. Then repeat your question in a simpler way.]`);
+  } else if (type === 'respond') {
+    injectHelpMessage(`[The user doesn't know how to respond. Give them 2-3 example phrases they could use to reply, appropriate for a ${state.level||'beginner'} level. Keep the examples simple and natural. Don't continue the scenario yet — wait for them to choose.]`);
+  }
+}
+
+async function injectHelpMessage(prompt) {
+  showTyping();
+  const history = state.history[state.mode];
+  history.push({ role:'user', content: prompt });
+
+  try {
+    const resp = await fetch(API_URL, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ model:MODEL, max_tokens:400, system:getSystemPrompt(), messages:history.map(m=>({role:m.role,content:m.content})) })
+    });
+    const data = await resp.json();
+    const raw = data.content?.[0]?.text || '';
+    const { text } = parseResponse(raw);
+    history.push({ role:'assistant', content: raw });
+    state.history[state.mode] = history;
+    saveHistory(state.mode);
+    removeTyping(); renderBubble('bot', text);
+  } catch(e) {
+    removeTyping(); renderBubble('bot', 'Error. Try again.');
+  }
+
+  document.getElementById('helpBar').querySelectorAll('.help-btn').forEach(b => b.disabled = false);
 }
 
 function resetLevel() {
@@ -755,6 +876,7 @@ function showToast(msg) {
 // ── INIT ──
 loadState().then(() => {
   updateLevelBadge();
+  document.getElementById('helpBar').classList.add('visible');
   if (state.diagnosisDone && state.level) {
     document.getElementById('diagnosisScreen').classList.add('hidden');
     startScenario();
