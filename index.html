@@ -457,7 +457,35 @@ const API_URL = "/api/chat";
 const MODEL   = "claude-sonnet-4-20250514";
 const SB_URL  = "https://ynoinlubuhyirznzgltn.supabase.co";
 const SB_KEY  = "sb_publishable_rUqzmfpIhz_U6pnI54JMhA_yRWXSOv6";
-const sb      = supabase.createClient(SB_URL, SB_KEY);
+const sb = supabase.createClient(SB_URL, SB_KEY, {
+  auth: {
+    storageKey: 'cotidioma_auth',
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  }
+});
+
+// Fix para Edge/Safari que bloquea storage en redirect OAuth
+async function parseHashAndSetSession() {
+  const hash = window.location.hash;
+  if (!hash || !hash.includes('access_token')) return false;
+  try {
+    // La URL viene como /?error=...#access_token=... — tomamos todo después del último #
+    const fragment = hash.includes('access_token') ? hash.replace(/^.*#access_token/, 'access_token') : hash.replace(/^#/, '');
+    const params = new URLSearchParams(fragment);
+    const access_token  = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    if (access_token && refresh_token) {
+      const { data, error } = await sb.auth.setSession({ access_token, refresh_token });
+      if (!error && data?.session) {
+        window.history.replaceState(null, '', window.location.pathname);
+        return true;
+      }
+    }
+  } catch(e) { console.warn('Hash parse error:', e); }
+  return false;
+}
 
 // ── AUTH ──
 let currentUser = null;
@@ -472,7 +500,7 @@ async function signInWithGoogle() {
     const { error } = await sb.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.href,
+        redirectTo: window.location.origin + window.location.pathname,
       }
     });
     if (error) throw error;
@@ -490,7 +518,10 @@ async function signOut() {
 }
 
 async function initAuth() {
-  // Check current session
+  // Primero intentar parsear hash (fix para Edge que bloquea storage)
+  await parseHashAndSetSession();
+
+  // Verificar sesión activa
   const { data: { session } } = await sb.auth.getSession();
   if (session?.user) {
     currentUser = session.user;
@@ -498,9 +529,9 @@ async function initAuth() {
     updateUserBadge();
     return true;
   }
-  // Listen for auth changes (handles redirect back from Google)
+  // Escuchar cambios de auth (otros browsers)
   sb.auth.onAuthStateChange((_event, session) => {
-    if (session?.user) {
+    if (session?.user && !currentUser) {
       currentUser = session.user;
       document.getElementById('loginScreen').classList.add('hidden');
       updateUserBadge();
