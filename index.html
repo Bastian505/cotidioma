@@ -34,6 +34,48 @@
     pointer-events: none; z-index: 0; opacity: .5;
   }
  
+  /* ── LOGIN SCREEN ── */
+  #loginScreen {
+    position: fixed; inset: 0; z-index: 200;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px; gap: 0;
+  }
+  #loginScreen.hidden { display: none; }
+  .login-logo {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 36px;
+    letter-spacing: 0.08em;
+    background: linear-gradient(135deg, var(--accent), #99c5ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+  }
+  .login-tagline {
+    font-size: 14px; color: var(--muted); margin-bottom: 48px;
+    text-align: center; line-height: 1.6; max-width: 280px;
+  }
+  .login-google-btn {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 28px; border-radius: 14px;
+    border: 1px solid var(--border); background: white;
+    cursor: pointer; transition: all .2s;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+    color: #3c4043; box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+    width: 100%; max-width: 320px; justify-content: center;
+  }
+  .login-google-btn:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.13); transform: translateY(-1px); }
+  .login-google-btn:active { transform: translateY(0); }
+  .login-google-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .login-footer {
+    margin-top: 32px; font-size: 11px; color: var(--muted);
+    text-align: center; line-height: 1.7; max-width: 280px;
+  }
+  .login-loading {
+    font-size: 13px; color: var(--muted); margin-top: 16px;
+    display: none;
+  }
+  .login-loading.visible { display: block; }
+
   /* ── DIAGNOSIS SCREEN ── */
   #diagnosisScreen {
     position: fixed; inset: 0; z-index: 100;
@@ -303,6 +345,27 @@
 </head>
 <body>
 
+<!-- ── LOGIN SCREEN ── -->
+<div id="loginScreen">
+  <div class="login-logo">COTIDIOMA</div>
+  <div class="login-tagline">Tu coach personal de inglés.<br>Aprende conversando, no memorizando.</div>
+
+  <button class="login-google-btn" onclick="signInWithGoogle()">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+    Continuar con Google
+  </button>
+  <div class="login-loading" id="loginLoading">Conectando...</div>
+
+  <div class="login-footer">
+    Al continuar aceptas que tus conversaciones se guardan<br>para mejorar tu experiencia de aprendizaje.
+  </div>
+</div>
+
 <!-- ── DIAGNOSIS SCREEN ── -->
 <div id="diagnosisScreen">
   <div class="diag-logo">COTIDIOMA</div>
@@ -328,6 +391,7 @@
 <header>
   <div class="logo">COTIDIOMA</div>
   <div class="level-badge" id="levelBadge" onclick="resetLevel()" title="Click to re-take diagnosis">Calibrating...</div>
+  <div class="level-badge" id="userBadge" onclick="if(confirm('¿Cerrar sesión?')) signOut()" style="margin-left:6px;">...</div>
 </header>
 
 <div class="mode-bar">
@@ -395,13 +459,81 @@ const SB_URL  = "https://ynoinlubuhyirznzgltn.supabase.co";
 const SB_KEY  = "sb_publishable_rUqzmfpIhz_U6pnI54JMhA_yRWXSOv6";
 const sb      = supabase.createClient(SB_URL, SB_KEY);
 
-// ── USER ID ──
+// ── AUTH ──
+let currentUser = null;
+
 function getUserId() {
-  let uid = localStorage.getItem('cotidioma_uid');
-  if (!uid) { uid = 'user_' + Math.random().toString(36).slice(2,11); localStorage.setItem('cotidioma_uid', uid); }
-  return uid;
+  return currentUser?.id || localStorage.getItem('cotidioma_uid') || 'anon';
 }
-const USER_ID = getUserId();
+
+async function signInWithGoogle() {
+  document.getElementById('loginLoading').classList.add('visible');
+  try {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.href,
+      }
+    });
+    if (error) throw error;
+  } catch(e) {
+    document.getElementById('loginLoading').classList.remove('visible');
+    alert('Error al conectar con Google. Intenta de nuevo.');
+  }
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  currentUser = null;
+  localStorage.removeItem('cotidioma_uid');
+  location.reload();
+}
+
+async function initAuth() {
+  // Check current session
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    document.getElementById('loginScreen').classList.add('hidden');
+    updateUserBadge();
+    return true;
+  }
+  // Listen for auth changes (handles redirect back from Google)
+  sb.auth.onAuthStateChange((_event, session) => {
+    if (session?.user) {
+      currentUser = session.user;
+      document.getElementById('loginScreen').classList.add('hidden');
+      updateUserBadge();
+      loadState().then(() => {
+        updateLevelBadge();
+        document.getElementById('helpBar').classList.add('visible');
+        if (state.diagnosisDone && state.level) {
+          document.getElementById('diagnosisScreen').classList.add('hidden');
+          startScenario();
+        } else {
+          startDiagnosis();
+        }
+      });
+    }
+  });
+  return false;
+}
+
+function updateUserBadge() {
+  if (!currentUser) return;
+  const name = currentUser.user_metadata?.full_name || currentUser.email || '';
+  const first = name.split(' ')[0];
+  const avatar = currentUser.user_metadata?.avatar_url;
+  const badge = document.getElementById('userBadge');
+  if (badge) {
+    badge.title = `${name} · Click para cerrar sesión`;
+    if (avatar) {
+      badge.innerHTML = `<img src="${avatar}" style="width:22px;height:22px;border-radius:50%;margin-right:6px;vertical-align:middle;">${first}`;
+    } else {
+      badge.textContent = first || 'Account';
+    }
+  }
+}
 
 // ── STATE ──
 let state = {
@@ -419,14 +551,14 @@ const DIAG_TURNS = 5;
 // ── SUPABASE ──
 async function loadState() {
   try {
-    const { data: profile } = await sb.from('profiles').select('*').eq('id', USER_ID).single();
+    const { data: profile } = await sb.from('profiles').select('*').eq('id', getUserId()).single();
     if (profile) {
       state.level        = profile.level;
       state.diagnosisDone = profile.diagnosis_done;
     }
-    const { data: errors } = await sb.from('errors').select('*').eq('user_id', USER_ID).order('ts', { ascending: true });
+    const { data: errors } = await sb.from('errors').select('*').eq('user_id', getUserId()).order('ts', { ascending: true });
     if (errors?.length) state.errors = errors.map(e => ({ wrong:e.wrong, right:e.right_text, why:e.why, mode:e.mode, ts:e.ts }));
-    const { data: histories } = await sb.from('history').select('*').eq('user_id', USER_ID);
+    const { data: histories } = await sb.from('history').select('*').eq('user_id', getUserId());
     if (histories) histories.forEach(h => { state.history[h.mode] = h.messages || []; });
   } catch(e) {
     const saved = JSON.parse(localStorage.getItem('cotidioma_state') || '{}');
@@ -438,15 +570,15 @@ async function loadState() {
 }
 async function saveProfile() {
   try {
-    await sb.from('profiles').upsert({ id:USER_ID, level:state.level, diagnosis_done:state.diagnosisDone, updated_at: new Date().toISOString() });
+    await sb.from('profiles').upsert({ id:getUserId(), level:state.level, diagnosis_done:state.diagnosisDone, updated_at: new Date().toISOString() });
   } catch(e) {}
   localStorage.setItem('cotidioma_state', JSON.stringify({ level:state.level, diagnosisDone:state.diagnosisDone, errors:state.errors }));
 }
 async function saveError(c) {
-  try { await sb.from('errors').insert({ user_id:USER_ID, wrong:c.wrong, right_text:c.right, why:c.why, mode:state.mode, ts:Date.now() }); } catch(e) {}
+  try { await sb.from('errors').insert({ user_id:getUserId(), wrong:c.wrong, right_text:c.right, why:c.why, mode:state.mode, ts:Date.now() }); } catch(e) {}
 }
 async function saveHistory(mode) {
-  try { await sb.from('history').upsert({ user_id:USER_ID, mode, messages:state.history[mode], updated_at:new Date().toISOString() }, { onConflict:'user_id,mode' }); } catch(e) {}
+  try { await sb.from('history').upsert({ user_id:getUserId(), mode, messages:state.history[mode], updated_at:new Date().toISOString() }, { onConflict:'user_id,mode' }); } catch(e) {}
 }
 
 // ── DIAGNOSIS SYSTEM PROMPT ──
@@ -874,7 +1006,9 @@ function showToast(msg) {
 }
 
 // ── INIT ──
-loadState().then(() => {
+initAuth().then(async (isLoggedIn) => {
+  if (!isLoggedIn) return; // waiting for Google redirect
+  await loadState();
   updateLevelBadge();
   document.getElementById('helpBar').classList.add('visible');
   if (state.diagnosisDone && state.level) {
